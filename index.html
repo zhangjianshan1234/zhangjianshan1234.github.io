@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三字经解说工作台</title>
+<style>
+  :root{
+    --paper:#f6f0e3;
+    --paper-deep:#efe6d3;
+    --paper-2:#fbf7ee;
+    --ink:#2e2a24;
+    --ink-soft:#5c554a;
+    --cinnabar:#a63b2c;
+    --cinnabar-deep:#8a2f22;
+    --gold:#b08d3e;
+    --jade:#3d5a52;
+    --line:rgba(120,100,70,.22);
+    --kai:'KaiTi','STKaiti','华文楷体','楷体','Noto Serif SC','SimSun',serif;
+    --song:'SimSun','宋体','STSong','Noto Serif SC',serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:var(--kai);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 500px at 85% -10%, rgba(176,141,62,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(61,90,82,.08), transparent 60%),
+      var(--paper);
+    overflow:hidden;
+  }
+  /* ===== 水墨氛围层 ===== */
+  .ink-bg{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .ink-bg svg{position:absolute;width:100%;height:100%}
+  .ink-mount{position:absolute;bottom:0;left:0;width:100%;height:42%;opacity:.16}
+  .grain{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");}
+  /* ===== 顶栏 ===== */
+  .topbar{
+    position:relative;z-index:10;
+    height:72px;display:flex;align-items:center;gap:18px;
+    padding:0 26px;
+    background:linear-gradient(180deg, rgba(246,240,227,.95), rgba(246,240,227,.6));
+    border-bottom:1px solid var(--line);
+    backdrop-filter:blur(4px);
+  }
+  .brand-seal{
+    width:46px;height:46px;flex:none;border-radius:8px;
+    background:var(--cinnabar);
+    color:#f6ede0;font-size:20px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 10px rgba(138,47,34,.35);
+    border:2px solid rgba(246,237,224,.55);
+    transform:rotate(-3deg);
+  }
+  .brand h1{font-size:24px;letter-spacing:6px;font-weight:700;line-height:1.1}
+  .brand .sub{font-size:12px;color:var(--ink-soft);letter-spacing:3px;margin-top:2px}
+  .topbar .spacer{flex:1}
+  .stat{display:flex;gap:22px;margin-right:10px}
+  .stat div{text-align:center}
+  .stat b{display:block;font-size:20px;color:var(--cinnabar);font-weight:700}
+  .stat span{font-size:11px;color:var(--ink-soft);letter-spacing:2px}
+  .searchbox{
+    display:flex;align-items:center;gap:8px;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:999px;
+    padding:7px 16px;width:230px;transition:.3s;
+  }
+  .searchbox:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,141,62,.15)}
+  .searchbox input{border:none;outline:none;background:transparent;font-family:var(--kai);font-size:14px;width:100%;color:var(--ink)}
+  .searchbox .s-ico{color:var(--gold);font-size:14px}
+  /* ===== 主体 ===== */
+  .stage{position:relative;z-index:6;display:flex;height:calc(100% - 72px)}
+  /* ===== 左栏 ===== */
+  .sidebar{
+    width:352px;flex:none;
+    border-right:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(239,230,211,.75), rgba(246,240,227,.55));
+    display:flex;flex-direction:column;
+    animation:slideIn .7s cubic-bezier(.22,.8,.3,1) both;
+  }
+  @keyframes slideIn{from{transform:translateX(-30px);opacity:0}to{transform:none;opacity:1}}
+  .sidebar-scroll{flex:1;overflow-y:auto;padding:16px 12px 30px;scrollbar-width:thin;scrollbar-color:rgba(120,100,70,.35) transparent}
+  .sidebar-scroll::-webkit-scrollbar{width:6px}
+  .sidebar-scroll::-webkit-scrollbar-thumb{background:rgba(120,100,70,.3);border-radius:3px}
+  .vol{
+    margin-bottom:14px;border-radius:10px;overflow:hidden;
+    border:1px solid var(--line);background:rgba(251,247,238,.72);
+  }
+  .vol-head{
+    display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;
+    background:linear-gradient(90deg, rgba(176,141,62,.16), transparent);
+    border-bottom:1px dashed rgba(120,100,70,.2);user-select:none;
+  }
+  .vol-head .v-no{
+    font-size:11px;color:#f6ede0;background:var(--jade);border-radius:4px;
+    padding:2px 7px;letter-spacing:1px;
+  }
+  .vol-head .v-name{font-size:16px;font-weight:700;letter-spacing:3px}
+  .vol-head .v-count{margin-left:auto;font-size:11px;color:var(--ink-soft)}
+  .vol-head .arrow{transition:.3s;color:var(--gold);font-size:12px}
+  .vol.collapsed .arrow{transform:rotate(-90deg)}
+  .vol.collapsed .vol-items{display:none}
+  .vol-items{padding:6px 8px}
+  .item{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 10px;margin:3px 0;border-radius:8px;cursor:pointer;
+    transition:background .25s, transform .2s;
+    border:1px solid transparent;
+  }
+  .item:hover{background:rgba(176,141,62,.12)}
+  .item:active{transform:scale(.985)}
+  .item .no{
+    flex:none;width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:var(--ink-soft);background:rgba(120,100,70,.08);
+    transition:.25s;font-weight:700;
+  }
+  .item .txt{font-size:15px;letter-spacing:1px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .txt small{display:block;font-size:11px;color:var(--ink-soft);letter-spacing:2px;margin-top:1px}
+  .item.active{background:var(--cinnabar);border-color:var(--cinnabar-deep);box-shadow:0 4px 14px rgba(138,47,34,.3)}
+  .item.active .no{background:rgba(246,237,224,.22);color:#f6ede0}
+  .item.active .txt{color:#f8f1e4}
+  .item.active .txt small{color:rgba(248,241,228,.75)}
+  /* ===== 右栏 ===== */
+  .main{
+    flex:1;min-width:0;position:relative;overflow:hidden;
+    background:
+      radial-gradient(700px 400px at 80% 12%, rgba(176,141,62,.07), transparent 60%),
+      radial-gradient(500px 500px at 20% 90%, rgba(61,90,82,.06), transparent 60%);
+  }
+  .main-scroll{height:100%;overflow-y:auto;padding:34px 52px 60px;position:relative;z-index:2;scrollbar-width:thin;scrollbar-color:rgba(120,100,70,.35) transparent}
+  .main-scroll::-webkit-scrollbar{width:8px}
+  .main-scroll::-webkit-scrollbar-thumb{background:rgba(120,100,70,.3);border-radius:4px}
+  /* 空态 */
+  .empty{
+    height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    color:var(--ink-soft);opacity:.8;text-align:center;
+  }
+  .empty .big{font-size:64px;color:rgba(176,141,62,.5);animation:bob 3.2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  .empty h2{font-size:26px;letter-spacing:10px;color:var(--ink);font-weight:700}
+  .empty p{font-size:14px;letter-spacing:3px;line-height:2}
+  .empty .line{width:120px;height:1px;background:var(--line);margin:4px 0}
+  /* 讲解内容 */
+  .story{animation:riseIn .55s cubic-bezier(.22,.8,.3,1) both}
+  @keyframes riseIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+  .story-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .story-head .chip{
+    font-size:12px;letter-spacing:2px;color:#f6ede0;
+    background:var(--jade);padding:4px 12px;border-radius:999px;
+  }
+  .story-head .seq{font-size:13px;color:var(--ink-soft);letter-spacing:3px}
+  .story-head .playall{margin-left:auto;display:flex;gap:8px}
+  .btn{
+    font-family:var(--kai);font-size:13px;letter-spacing:2px;cursor:pointer;
+    border:1px solid var(--line);background:var(--paper-2);color:var(--ink);
+    padding:7px 16px;border-radius:999px;transition:.25s;
+  }
+  .btn:hover{border-color:var(--gold);color:var(--cinnabar);box-shadow:0 2px 8px rgba(176,141,62,.2)}
+  .btn.primary{background:var(--cinnabar);border-color:var(--cinnabar-deep);color:#f8f1e4}
+  .btn.primary:hover{background:var(--cinnabar-deep);color:#fff}
+  .btn.playing{animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(166,59,44,.35)}50%{box-shadow:0 0 0 8px rgba(166,59,44,0)}}
+  /* 原文展示 */
+  .verse-box{
+    position:relative;margin:18px 0 22px;padding:30px 34px;
+    background:linear-gradient(135deg, rgba(251,247,238,.92), rgba(239,230,211,.55));
+    border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 10px 30px rgba(70,55,30,.08);
+    overflow:hidden;
+  }
+  .verse-box::before{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(240px 90px at 8% 0%, rgba(176,141,62,.14), transparent 70%),
+      radial-gradient(260px 120px at 96% 100%, rgba(166,59,44,.08), transparent 70%);
+  }
+  .verse-box .seal{
+    position:absolute;top:16px;right:18px;width:52px;height:52px;border-radius:6px;
+    background:var(--cinnabar);color:rgba(248,241,228,.92);
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:700;transform:rotate(5deg);
+    box-shadow:0 3px 10px rgba(138,47,34,.3);
+    border:2px solid rgba(248,241,228,.4);
+    z-index:2;letter-spacing:1px;
+  }
+  .verse-box .seal .mini{font-size:9px;display:block;text-align:center;letter-spacing:0}
+  .verse-line{
+    display:flex;align-items:baseline;gap:14px;padding:7px 0;
+    font-size:30px;letter-spacing:7px;font-weight:700;line-height:1.5;
+  }
+  .verse-line .idx{font-size:13px;color:var(--gold);flex:none;letter-spacing:0;font-weight:400}
+  .verse-line .words span{display:inline-block;opacity:0;transform:translateY(10px)}
+  .verse-line .words span.on{animation:dropIn .45s cubic-bezier(.22,.8,.3,1) forwards}
+  @keyframes dropIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .verse-line .pinyin{font-size:12px;color:var(--ink-soft);letter-spacing:1px;font-weight:400;opacity:.75}
+  /* 句画网格：每一句的画面展示 */
+  .verse-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+  .sg{
+    position:relative;border:1px solid var(--line);border-radius:12px;
+    background:linear-gradient(160deg, rgba(251,247,238,.92), rgba(239,230,211,.45));
+    padding:12px 14px 10px;overflow:hidden;
+    transition:box-shadow .3s, transform .2s;
+  }
+  .sg:hover{box-shadow:0 8px 20px rgba(70,55,30,.14);transform:translateY(-2px)}
+  .sg .sg-head{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .sg .sg-no{
+    flex:none;font-size:11px;color:#f6ede0;background:var(--cinnabar);
+    border-radius:4px;padding:2px 8px;letter-spacing:1px;
+  }
+  .sg .sg-words{font-size:23px;letter-spacing:5px;font-weight:700;line-height:1.2}
+  .sg .sg-words span{display:inline-block;opacity:0;transform:translateY(10px)}
+  .sg .sg-words span.on{animation:dropIn .45s cubic-bezier(.22,.8,.3,1) forwards}
+  .sg .sg-illu{
+    margin:2px 0 4px;border-radius:10px;overflow:hidden;
+    border:1px solid rgba(120,100,70,.2);
+    background:radial-gradient(120% 120% at 50% 18%, #fbf6ea, #ece2cb);
+    opacity:0;transform:scale(.93);transition:.65s cubic-bezier(.22,.8,.3,1);
+  }
+  .sg .sg-illu.show{opacity:1;transform:scale(1)}
+  .sg .sg-illu svg{display:block;width:100%;height:auto}
+  .sg .sg-cap{font-size:12.5px;color:var(--ink-soft);letter-spacing:5px;text-align:center;padding-top:3px}
+  @media (max-width:640px){.verse-grid{grid-template-columns:1fr}}
+  /* 章节 */
+  .section-card{
+    margin:14px 0;padding:20px 24px;border-radius:12px;
+    background:rgba(251,247,238,.75);border:1px solid var(--line);
+    border-left:4px solid var(--gold);
+  }
+  .section-card .tag{
+    display:inline-block;font-size:12px;letter-spacing:3px;color:var(--cinnabar);
+    border:1px solid rgba(166,59,44,.35);border-radius:4px;padding:2px 10px;margin-bottom:10px;
+  }
+  .section-card .body{font-size:16.5px;line-height:2;letter-spacing:.5px;color:var(--ink)}
+  .section-card .body b{color:var(--cinnabar);font-weight:700}
+  /* 故事 */
+  .tale-card{
+    margin:14px 0;padding:22px 24px;border-radius:12px;
+    background:rgba(239,230,211,.5);border:1px solid var(--line);
+    border-left:4px solid var(--jade);
+  }
+  .tale-card .tag{display:inline-block;font-size:12px;letter-spacing:3px;color:var(--jade);border:1px solid rgba(61,90,82,.35);border-radius:4px;padding:2px 10px;margin-bottom:10px}
+  .tale-card .body{font-size:16px;line-height:2.05;letter-spacing:.4px}
+  .tale-card .body .hl{color:var(--cinnabar);font-weight:700}
+  /* 寓意 */
+  .moral-card{
+    margin:14px 0;padding:18px 24px;border-radius:12px;
+    background:linear-gradient(120deg, rgba(166,59,44,.08), rgba(176,141,62,.08));
+    border:1px dashed rgba(166,59,44,.4);
+    display:flex;gap:14px;align-items:flex-start;
+  }
+  .moral-card .m-seal{flex:none;width:44px;height:44px;border-radius:8px;background:var(--cinnabar);color:#f6ede0;font-size:13px;display:flex;align-items:center;justify-content:center;transform:rotate(-4deg);box-shadow:0 2px 8px rgba(138,47,34,.3);border:1px solid rgba(246,237,224,.5)}
+  .moral-card .body{font-size:15.5px;line-height:1.9;letter-spacing:.5px;color:var(--ink);padding-top:2px}
+  /* 插画 */
+  .illu-wrap{display:flex;justify-content:center;margin:10px 0 16px;position:relative}
+  .illu{
+    width:280px;height:170px;border-radius:14px;overflow:hidden;position:relative;
+    background:radial-gradient(120% 120% at 50% 20%, #fbf6ea, #ece2cb);
+    border:1px solid rgba(120,100,70,.25);
+    box-shadow:0 8px 24px rgba(70,55,30,.12);
+    opacity:0;transform:scale(.94);transition:.6s cubic-bezier(.22,.8,.3,1);
+  }
+  .illu.show{opacity:1;transform:scale(1)}
+  .illu svg{position:absolute;inset:0;width:100%;height:100%}
+  .illu .cap{
+    position:absolute;left:0;right:0;bottom:0;padding:5px 0 7px;text-align:center;
+    font-size:12px;letter-spacing:4px;color:#6b5b45;
+    background:linear-gradient(180deg, transparent, rgba(246,240,227,.85));
+  }
+  /* 水墨扩散动画 */
+  .ink-ripple{position:absolute;border-radius:50%;pointer-events:none;z-index:1;transform:translate(-50%,-50%)}
+  .ink-ripple.run{animation:ripple 1.6s ease-out forwards}
+  @keyframes ripple{from{width:0;height:0;opacity:.5;background:radial-gradient(circle, rgba(61,90,82,.28), transparent 70%)}to{width:520px;height:520px;opacity:0}}
+  /* 底部导航 */
+  .nav-foot{display:flex;justify-content:space-between;align-items:center;margin-top:26px;padding-top:16px;border-top:1px dashed var(--line)}
+  .nav-foot .hint{font-size:12px;color:var(--ink-soft);letter-spacing:2px}
+  .nav-foot .hint kbd{font-family:var(--kai);border:1px solid var(--line);border-radius:4px;padding:1px 6px;background:var(--paper-2);font-size:11px}
+  .nav-btns{display:flex;gap:10px}
+  /* 阅读进度 */
+  .progress{
+    position:fixed;bottom:0;left:0;height:3px;z-index:20;
+    background:linear-gradient(90deg, var(--cinnabar), var(--gold));
+    width:0;transition:width .2s;
+  }
+  .reveal{opacity:0;transform:translateY(16px)}
+  .reveal.on{animation:riseIn .6s cubic-bezier(.22,.8,.3,1) forwards}
+  /* 响应式 */
+  @media (max-width:960px){
+    body{overflow:auto}
+    .stage{flex-direction:column;height:auto}
+    .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--line);max-height:44vh}
+    .main-scroll{padding:26px 20px 50px}
+    .verse-line{font-size:24px;letter-spacing:4px}
+    .topbar{flex-wrap:wrap;height:auto;padding:12px 16px;gap:10px}
+    .stat{display:none}
+    .searchbox{width:100%}
+  }
+  .fade-in{animation:riseIn .5s both}
+  .toast{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#f6ede0;font-size:13px;letter-spacing:2px;
+    padding:10px 22px;border-radius:999px;opacity:0;transition:.35s;z-index:50;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="ink-bg" aria-hidden="true">
+  <svg class="ink-mount" viewBox="0 0 1440 320" preserveAspectRatio="none">
+    <path d="M0,220 C180,120 320,260 520,180 C700,110 840,240 1040,170 C1200,115 1330,200 1440,150 L1440,320 L0,320 Z" fill="#3d5a52"/>
+    <path d="M0,250 C220,180 420,290 660,230 C860,180 1080,280 1440,210 L1440,320 L0,320 Z" fill="#2e2a24" opacity=".55"/>
+  </svg>
+</div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand-seal">三</div>
+  <div class="brand">
+    <h1>三字经解说工作台</h1>
+    <div class="sub">国学启蒙 · 蒙以养正 · 点击左卷，右展动画故事</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="stat">
+    <div><b id="stat-total">102</b><span>全篇则目</span></div>
+    <div><b>5</b><span>篇章卷轴</span></div>
+    <div><b id="stat-cur">0</b><span>当前进度</span></div>
+  </div>
+  <div class="searchbox">
+    <span class="s-ico">🔍</span>
+    <input id="search" type="text" placeholder="搜索原文 / 故事 / 人名…" autocomplete="off">
+  </div>
+</header>
+
+<div class="stage">
+  <!-- ============ 左栏 ============ -->
+  <aside class="sidebar">
+    <div class="sidebar-scroll" id="volList"></div>
+  </aside>
+
+  <!-- ============ 右栏 ============ -->
+  <main class="main">
+    <div class="main-scroll" id="mainScroll">
+      <div class="empty" id="emptyState">
+        <div class="big">📜</div>
+        <h2>三 字 经</h2>
+        <div class="line"></div>
+        <p>人之初 · 性本善</p>
+        <p>左侧五卷共一百零二则</p>
+        <p>轻点一则，右侧展开动画故事讲解</p>
+      </div>
+      <div id="storyView" style="display:none"></div>
+      <div class="nav-foot" id="navFoot" style="display:none">
+        <div class="hint"><kbd>↑</kbd> <kbd>↓</kbd> 切换则目 · <span id="navPos"></span></div>
+        <div class="nav-btns">
+          <button class="btn" id="btnPrev">← 上一则</button>
+          <button class="btn" id="btnNext">下一则 →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   三字经数据：102 则 · 五卷
+   v:卷号  i:则序  w:原文(句数组)  t:译文  s:故事  m:寓意  ill:插画key
+========================================================= */
+const VOLS = [
+  {no:'一', name:'教化篇', range:'人之初 — 能让梨'},
+  {no:'二', name:'常识篇', range:'首孝弟 — 明句读'},
+  {no:'三', name:'典籍篇', range:'为学者 — 知终始'},
+  {no:'四', name:'历史篇', range:'自羲农 — 若亲目'},
+  {no:'五', name:'劝学篇', range:'口而诵 — 宜勉力'}
+];
+
+const DATA = [
+{v:1,i:1,w:['人之初','性本善','性相近','习相远'],t:'每个人刚出生的时候，天性都是善良的。人与人的天性本来相近，但因为后天的环境和学习不同，差别就越来越大了。',s:'这是全书的开篇，也是《三字经》的核心思想，源自孟子“性善论”。孩子生来像一张白纸，是纯真善良的；而“习”——习惯、教养、环境——决定了人生最终的模样。所以古人说，教育要从娃娃抓起，先养善根，再学本事。',m:'天性相近，教养有别；环境塑人，启蒙要趁早。',ill:'home'},
+{v:1,i:2,w:['苟不教','性乃迁','教之道','贵以专'],t:'如果不好好教育，善良的本性就会变坏。教育的方法，最重要的是专心致志、持之以恒。',s:'“迁”是迁移、改变。善性如水，若不引导就会随波逐流。古人教子最重一个“专”字：王羲之教儿子王献之练字，要他写完院中十八缸水；孟母三迁、断机教子，都是“教贵以专”的活例子。教育如此，学习亦然。',m:'教育贵在专一持久，不可半途而废。',ill:'home'},
+{v:1,i:3,w:['昔孟母','择邻处','子不学','断机杼'],t:'从前孟子的母亲，为了让孟子有好的成长环境，三次搬家。孟子逃学回家，母亲割断织布机上快要织成的布，告诫他半途而废，就像这断布一样前功尽弃。',s:'孟母三迁：起初家住墓地旁，孟子学着办丧事；搬到集市旁，孟子又学买卖吆喝；最后迁到学堂旁，孟子才跟着读书人学礼。一次孟子逃学，孟母当着他的面割断织了一半的布，说：“你荒废学业，就像我割断这布，一切都白费了。”孟子从此发愤苦读，终成“亚圣”。',m:'环境塑造人；学习不可半途而废。',ill:'mengmu'},
+{v:1,i:4,w:['窦燕山','有义方','教五子','名俱扬'],t:'五代时的窦燕山（窦禹钧）教子有方，五个儿子都学业有成、名扬天下。',s:'窦燕山年轻时曾做错事，后来痛改前非，广行善事，还创办义学、请名师教孩子。他的五个儿子窦仪、窦俨、窦侃、窦偁、窦僖相继考中进士，人称“窦氏五龙”。当时的人都说：论教子有方，窦家天下第一。',m:'以身作则、积善传家，是最好的家教。',ill:'home'},
+{v:1,i:5,w:['养不教','父之过','教不严','师之惰'],t:'生养孩子却不教育，是父亲的过错；教育学生却不严格要求，是老师的懈怠。',s:'古人把“养”与“教”看得一样重。曾子“杀彘教子”——妻子随口答应孩子回来杀猪吃，曾子真的把猪杀了，因为他知道：大人说话不算话，孩子将来就学不会诚信。师严则徒高，严，是对孩子真正的负责。',m:'父母与师长都要尽到教养之责。',ill:'home'},
+{v:1,i:6,w:['子不学','非所宜','幼不学','老何为'],t:'小孩子不学习，是很不应该的。小时候不学好本领，老了能有什么作为呢？',s:'“少壮不努力，老大徒伤悲。”东晋名将祖逖，年轻时与好友刘琨同睡，半夜听到鸡叫就起床练剑，寒来暑往从不间断，终于练就一身本领，后来北伐中原、名垂青史。少年时光一去不回，正是打根基的黄金期。',m:'珍惜少年时光，勤学立志。',ill:'study'},
+{v:1,i:7,w:['玉不琢','不成器','人不学','不知义'],t:'玉石不经过雕琢，不能成为精美的器物；人不学习，就不懂得做人的道理。',s:'楚人卞和发现一块璞玉，献给楚王，却因无人识货被两次砍去双脚。他抱着玉石哭了三天三夜，楚文王剖开玉石，里面竟是稀世美玉，后人雕成“和氏璧”。天赋再好，也要经过打磨雕琢，才能成为传世之宝。人也一样，学习，就是那一道雕琢。',m:'学习是成才的必经之路。',ill:'study'},
+{v:1,i:8,w:['为人子','方少时','亲师友','习礼仪'],t:'做儿女的，正当年少时，要亲近老师和朋友，学习待人接物的礼节。',s:'孔子的儿子孔鲤“趋庭”受教：孔子站在庭院里问他，学《诗》了吗？学《礼》了吗？并告诉他：“不学诗，无以言；不学礼，无以立。”言行有礼、亲近良师益友，正是少年必修的功课。',m:'亲近良师益友，学习礼仪规矩。',ill:'home'},
+{v:1,i:9,w:['香九龄','能温席','孝于亲','所当执'],t:'东汉黄香九岁时，就知道冬天先给父亲暖被窝。孝敬父母，是为人子女应当做到的。',s:'黄香温席：黄香家境贫寒，冬天怕父亲受凉，先钻进冰冷的被窝，把被褥暖热了再请父亲入睡；夏天则用扇子把枕席扇凉。九岁孩童的孝心感动乡里，人们称赞他“天下无双，江夏黄香”。孝，就藏在这些不起眼的小事里。',m:'百善孝为先，从身边小事做起。',ill:'huangxiang'},
+{v:1,i:10,w:['融四岁','能让梨','弟于长','宜先知'],t:'孔融四岁时，就知道把大的梨让给哥哥。敬爱兄长、懂得谦让，是应该从小明白的道理。',s:'孔融让梨：孔融四岁那年，和兄弟们一起吃梨，别人都挑大的，他偏偏拿最小的。大人问他为什么，他说：“我年纪小，应当拿小的，大的让给哥哥。”这份谦让，正是儒家“悌”道的体现，千百年来被一代代孩子记在心里。',m:'谦让友爱，尊重兄长。',ill:'kongrong'},
+
+{v:2,i:11,w:['首孝弟','次见闻','知某数','识某文'],t:'做人首先要懂得孝敬父母、敬爱兄长，其次才是增长见闻，学习知识文化。',s:'古人的学习顺序是“先做人，后做事”。孝悌是立身之本，连家人都不能善待，学问再多也立不住；数、文是求知之基，用来开阔眼界、增长才干。德行为先，学问为次，这个顺序不可颠倒。',m:'德行为先，学问为次。',ill:'scroll'},
+{v:2,i:12,w:['一而十','十而百','百而千','千而万'],t:'从一到十，从十到百，从百到千，从千到万，数字由此不断累积。',s:'这是古人最朴素的数学启蒙：一二三四五，数到万万千。荀子说“不积跬步，无以至千里；不积小流，无以成江海”。知识靠日积月累，一切伟大的成就，都从最小的“一”开始。',m:'积少成多，循序渐进。',ill:'scroll'},
+{v:2,i:13,w:['三才者','天地人','三光者','日月星'],t:'古人说“三才”是天才、地才、人才；“三光”是日光、月光、星光。',s:'古人仰望星空，俯察大地，把人放在与天地并立的位置，称为“三才”，认为人是万物之灵，可以参赞天地化育；日月星辰照亮人间，称为“三光”。这是古人对宇宙最初的敬畏与认识。',m:'认识天地自然，敬畏生命。',ill:'sun'},
+{v:2,i:14,w:['三纲者','君臣义','父子亲','夫妇顺'],t:'古人说的“三纲”是：君臣之间要讲道义，父子之间要讲亲爱，夫妇之间要和顺。',s:'这是古代社会的伦理框架：上下有义、长幼有亲、夫妇和顺。放到今天，我们取其精华——忠于职守、父慈子孝、家庭和睦，依然是美好的品格。',m:'各守其分，人伦有序。',ill:'scroll'},
+{v:2,i:15,w:['曰春夏','曰秋冬','此四时','运不穷'],t:'春、夏、秋、冬四季循环往复，运转不息。',s:'四季更替是天地间最大的规律。春种、夏长、秋收、冬藏，古人顺应四时安排农事与生活，“日出而作，日落而息”，这便是天人合一的生活智慧。',m:'顺应自然，珍惜时节。',ill:'sun'},
+{v:2,i:16,w:['曰南北','曰西东','此四方','应乎中'],t:'南、北、西、东四个方向，都围绕中央而存在。',s:'古人以“中”为尊，认为四方环绕中央而存在。我们的祖国叫“中国”，正是这种“居中而统四方”观念的体现。心中有中，方向就不乱。',m:'确立方位，心怀家国。',ill:'sun'},
+{v:2,i:17,w:['曰水火','木金土','此五行','本乎数'],t:'水、火、木、金、土五种元素，称为“五行”，它们的变化都遵循一定的规律。',s:'五行学说是中国古代哲学的核心之一：木生火、火生土、土生金、金生水、水生木，相生又相克。古人用它解释万物的变化，中医、历法、建筑都与它息息相关。',m:'万物相生相克，认识规律。',ill:'sun'},
+{v:2,i:18,w:['曰仁义','礼智信','此五常','不容紊'],t:'仁、义、礼、智、信五种常道，是为人处世的基本准则，不容混乱。',s:'五常是儒家道德的核心：仁是爱人，义是正直，礼是规矩，智是明辨，信是诚信。古人以五常修身，把这五个字刻进日常的言行里，塑造了中国人温良恭俭让的品格。',m:'五常修身，德行为本。',ill:'scroll'},
+{v:2,i:19,w:['稻粱菽','麦黍稷','此六谷','人所食'],t:'稻、粱、菽、麦、黍、稷这六种谷物，是古人最主要的粮食。',s:'“五谷丰登”是农耕民族最大的愿望。六谷养育了中华儿女，也造就了灿烂的农耕文明。每一粒米都来之不易，“谁知盘中餐，粒粒皆辛苦”。',m:'珍惜粮食，感恩土地。',ill:'sun'},
+{v:2,i:20,w:['马牛羊','鸡犬豕','此六畜','人所饲'],t:'马、牛、羊、鸡、狗、猪这六种家畜，是人类饲养的伙伴。',s:'六畜是人类最早驯化的动物：马驾车，牛耕田，羊供衣，鸡报晓，犬守门，猪供食。它们与农耕生活密不可分，是中华田园最温暖的记忆。',m:'人与动物和谐相处。',ill:'sun'},
+{v:2,i:21,w:['曰喜怒','曰哀惧','爱恶欲','七情具'],t:'喜、怒、哀、惧、爱、恶、欲，这七种情感，人人都有。',s:'七情是与生俱来的情感，没有好坏之分。关键是学会调节——《中庸》说“发而皆中节谓之和”，情绪表达合乎分寸，内心才会平和安宁。',m:'认识情绪，学会调适。',ill:'scroll'},
+{v:2,i:22,w:['匏土革','木石金','丝与竹','乃八音'],t:'匏、土、革、木、石、金、丝、竹这八种材料制成的乐器，称为“八音”。',s:'八音是古代乐器分类法：匏是葫芦笙，土是陶埙，革是皮鼓，木是柷，石是磬，金是钟，丝是琴瑟，竹是笛箫。中国古乐，八音和鸣，源远流长。',m:'礼乐文化，陶冶性情。',ill:'scroll'},
+{v:2,i:23,w:['高曾祖','父而身','身而子','子而孙'],t:'由高祖父、曾祖父、祖父、父亲到自己，再到儿子、孙子……',s:'这是家族的纵向血脉：高、曾、祖、父、身、子、孙，一代代往下传。中国人讲“慎终追远”，记住来处，才知去处；家族之树，根深才能叶茂。',m:'知家族来处，承先启后。',ill:'scroll'},
+{v:2,i:24,w:['自子孙','至玄曾','乃九族','人之伦'],t:'从自己的子孙一直到玄孙、曾孙，加上自己，上下共九代，称为“九族”。',s:'九族即上四代（高、曾、祖、父）、自己、下四代（子、孙、曾、玄）。古时一人获罪可能牵连九族，可见古人多么看重宗族；如今我们更珍视的，是家族团圆、血脉相连的温情。',m:'家族团圆，血脉相连。',ill:'scroll'},
+{v:2,i:25,w:['父子恩','夫妇从','兄则友','弟则恭'],t:'父亲慈爱、子女孝顺，夫妇和睦，兄长友爱、弟弟恭敬。',s:'家庭伦理是社会的细胞。父慈子孝、夫义妇顺、兄友弟恭，每个角色都尽本分，家就和顺了——家和，万事才能兴旺。',m:'家和万事兴。',ill:'scroll'},
+{v:2,i:26,w:['长幼序','友与朋','君则敬','臣则忠'],t:'长幼有序，朋友讲信义；君主要仁爱敬重，臣子要忠诚尽责。',s:'古人理想中的社会秩序：长辈晚辈有礼，朋友相交以信，上下各尽其道。放到今天，就是尊老爱幼、诚信待人、爱岗敬业，各安其位，各尽其责。',m:'各安其位，各尽其责。',ill:'scroll'},
+{v:2,i:27,w:['此十义','人所同','当师叙','勿违背'],t:'这十种道义——父慈、子孝、夫和、妇顺、兄友、弟恭、朋信、友义、君敬、臣忠，是人人应遵守的，应当遵从，不可违背。',s:'十义总结了古代社会人与人之间最重要的十种伦理关系：父子、夫妇、兄弟、朋友、君臣，五对关系各守其义，就是古人心中和谐社会的蓝图。',m:'以义立身，与人和谐。',ill:'scroll'},
+{v:2,i:28,w:['斩齐衰','大小功','至缌麻','五服终'],t:'斩衰、齐衰、大功、小功、缌麻，五种丧服，表示亲疏远近。',s:'五服是古代丧礼制度，按照与逝者关系的亲疏，穿戴五种不同等级的丧服，由重到轻。它体现了中国人“慎终追远，民德归厚”的孝道传统。',m:'慎终追远，孝道传承。',ill:'scroll'},
+{v:2,i:29,w:['礼乐射','御书数','古六艺','今不具'],t:'礼、乐、射、御、书、数，是古代要求学生掌握的六种才能，现在已经不齐全了。',s:'六艺是周朝贵族教育的内容：礼是礼仪，乐是音乐，射是射箭，御是驾车，书是书法，数是算术。德智体美劳全面发展，古人在三千年前就已实践。',m:'全面发展，博学多才。',ill:'scroll'},
+{v:2,i:30,w:['惟书学','人共遵','既识字','讲说文'],t:'只有书（文字）之学，是大家都必须学习的。认识字之后，还要学习《说文解字》来理解文字的本义。',s:'《说文解字》是东汉许慎所著，中国第一部系统分析汉字字形、字义的字典，共收九千三百五十三个字。认字不是死记，要明白每个字为什么这样写，才能真懂汉字之美。',m:'认字明理，打好基础。',ill:'scroll'},
+{v:2,i:31,w:['有古文','大小篆','隶草继','不可乱'],t:'古文字有大篆、小篆，后来又有隶书、草书，字体演变自有顺序，不可混淆。',s:'汉字的演变之路：甲骨文、金文、大篆、小篆、隶书、草书、楷书、行书。秦始皇统一文字用“小篆”，隶书让书写更快，草书则更奔放自由。一字一世界，汉字是活的文明。',m:'汉字之美，源远流长。',ill:'scroll'},
+{v:2,i:32,w:['若广学','惧其繁','但略说','能知原'],t:'如果广泛学习，内容太多令人畏惧；但大体了解一下，就能知道事物的本源。',s:'庄子说“吾生也有涯，而知也无涯”。学问浩如烟海，聪明的学法是先搭框架、抓主干，再深入钻研——先见森林，再识树木。',m:'提纲挈领，循序渐进。',ill:'scroll'},
+{v:2,i:33,w:['凡训蒙','须讲究','详训诂','明句读'],t:'凡是教导小孩子读书，必须讲究方法：要详细解释字词的意思，讲清楚句子的停顿（句读）。',s:'古代启蒙教育很讲究方法：“训诂”是解释字词的本义，“句读”是给文章断句。读懂了字词句，才算真正读通了书。读书，先求真，再求深。',m:'读书讲方法，求真求实。',ill:'scroll'},
+
+{v:3,i:34,w:['为学者','必有初','小学终','至四书'],t:'做学问一定有个先后次序：先学完“小学”（文字、训诂等基础），再读“四书”。',s:'古人的学习路径非常清晰：先识字、明训诂，打好“小学”根基；再读《大学》《中庸》《论语》《孟子》四书，由浅入深，按部就班。基础不牢，地动山摇。',m:'由浅入深，按部就班。',ill:'book'},
+{v:3,i:35,w:['论语者','二十篇','群弟子','记善言'],t:'《论语》共二十篇，是孔子的弟子们记录孔子言行善言的著作。',s:'《论语》是儒家最重要的经典之一，“半部论语治天下”的说法流传千年。“学而时习之”“三人行，必有我师焉”“己所不欲，勿施于人”，这些名句至今仍在教导我们做人做事。',m:'读经典，学做人的智慧。',ill:'book'},
+{v:3,i:36,w:['孟子者','七篇止','讲道德','说仁义'],t:'《孟子》共七篇，讲道德，说仁义。',s:'孟子是“亚圣”，主张性善论，提倡“民贵君轻”。他留下“富贵不能淫，贫贱不能移，威武不能屈”的大丈夫气概，也留下“天将降大任于斯人也”的千古名句。',m:'养浩然之气，守仁义之心。',ill:'book'},
+{v:3,i:37,w:['作中庸','子思笔','中不偏','庸不易'],t:'《中庸》是孔子的孙子子思所作。“中”是不偏不倚，“庸”是恒常不变。',s:'《中庸》讲“中庸之道”——恰到好处、不偏不倚、恒常不变。它不是和稀泥，而是把握分寸的智慧，是中国人处世的大境界：从容中道，不疾不徐。',m:'把握分寸，从容中道。',ill:'book'},
+{v:3,i:38,w:['作大学','乃曾子','自修齐','至平治'],t:'《大学》是曾子所作，讲从修身齐家到治国平天下的道理。',s:'《大学》开篇说“大学之道，在明明德，在亲民，在止于至善”，并提出“格物、致知、诚意、正心、修身、齐家、治国、平天下”八条目——先修己，再安人，这是中国士人千年的理想路径。',m:'修身是齐家治国平天下的起点。',ill:'book'},
+{v:3,i:39,w:['孝经通','四书熟','如六经','始可读'],t:'读通了《孝经》、熟读了四书，才可以开始读六经。',s:'《孝经》讲孝道：“身体发肤，受之父母，不敢毁伤。”古人认为孝是百行之源，先懂孝，再学经，顺序不能乱。孝，是中华文化最深的根。',m:'百善孝为先，先立本再求博。',ill:'book'},
+{v:3,i:40,w:['诗书易','礼春秋','号六经','当讲求'],t:'《诗经》《尚书》《易经》《礼记》《春秋》，加上《乐经》，合称六经，应当认真学习。',s:'六经是儒家经典的核心：《诗》言志，《书》记言，《礼》立规矩，《乐》和性情，《易》明变化，《春秋》辨是非。经书里，藏着中国人看世界的方式。',m:'六经皆史，博古通今。',ill:'book'},
+{v:3,i:41,w:['有连山','有归藏','有周易','三易详'],t:'古代有《连山》《归藏》《周易》三部易书，合称“三易”。',s:'《周易》是群经之首，讲阴阳变化之道。“天行健，君子以自强不息；地势坤，君子以厚德载物”便出自其中，至今仍是无数人的座右铭。',m:'读易明变，自强不息。',ill:'book'},
+{v:3,i:42,w:['有典谟','有训诰','有誓命','书之奥'],t:'《尚书》中有典、谟、训、诰、誓、命等文体，是古代政事文书，深奥难懂。',s:'《尚书》是我国最早的政事史料汇编，记录上古帝王的治国言论，被称为“上古之书”。读它，就像翻开中国政治文明的第一页。',m:'以史为鉴，可知兴替。',ill:'book'},
+{v:3,i:43,w:['我周公','作周礼','著六官','存治体'],t:'周公制作《周礼》，设立天、地、春、夏、秋、冬六官，保存了国家的治理体制。',s:'周公旦辅佐周成王，制礼作乐，奠定周朝八百年基业。孔子一生最推崇周公，甚至说“久矣，吾不复梦见周公”——礼乐制度，是周公留给中华文明最厚重的遗产。',m:'礼乐治国，制度为本。',ill:'zhougong'},
+{v:3,i:44,w:['大小戴','注礼记','述圣言','礼乐备'],t:'戴德、戴圣叔侄两人编注《礼记》，记述圣人的言论，使礼乐制度完备。',s:'大戴（戴德）辑《大戴礼记》，小戴（戴圣）辑《礼记》。《礼记》中“玉不琢，不成器”“大道之行也，天下为公”等名句，至今读来仍振聋发聩。',m:'礼以立身，乐以和心。',ill:'book'},
+{v:3,i:45,w:['曰国风','曰雅颂','号四诗','当讽咏'],t:'《诗经》分为国风、大雅、小雅、颂，合称“四诗”，应当吟咏诵读。',s:'《诗经》三百零五篇，“风、雅、颂”是内容分类，“赋、比、兴”是表现手法，合称“六义”。“关关雎鸠，在河之洲”“蒹葭苍苍，白露为霜”，两千多年后依然动人心弦。',m:'诗以言志，吟咏性情。',ill:'book'},
+{v:3,i:46,w:['诗既亡','春秋作','寓褒贬','别善恶'],t:'采诗的制度废弛后，孔子作了《春秋》，在字里行间寓含褒贬，明辨善恶。',s:'《春秋》记载鲁国历史，用笔极简却褒贬分明，后人称之为“春秋笔法”：一字之褒，荣于华衮；一字之贬，严于斧钺。是非善恶，都在笔下。',m:'是非分明，笔直心正。',ill:'book'},
+{v:3,i:47,w:['三传者','有公羊','有左氏','有谷梁'],t:'解释《春秋》的有三部传：《公羊传》《左传》《谷梁传》。',s:'《左传》记事最详，善讲故事，“曹刿论战”“郑伯克段于鄢”都出自其中；《公羊》《谷梁》则重在阐发义理。同一部史，三种读法，给我们多角度看问题的启发。',m:'读史明理，多角度思考。',ill:'book'},
+{v:3,i:48,w:['经既明','方读子','撮其要','记其事'],t:'经书读明白之后，才开始读诸子百家的书，要抓住要点，记住其中的事例。',s:'古人的读书顺序是“先经后子”：先立定儒家根本，再博览诸子百家。读子书讲究“撮要记事”——抓住核心思想，记住典型事例，取其精华，去其糟粕。',m:'先立根本，再求广博。',ill:'book'},
+{v:3,i:49,w:['五子者','有荀扬','文中子','及老庄'],t:'诸子中重要的有五家：荀子、扬雄、文中子（王通）、老子、庄子。',s:'荀子劝学，“青，取之于蓝而青于蓝”；老子讲道法自然；庄子讲逍遥齐物。五子思想各具锋芒，是中华智慧最璀璨的星空。',m:'博采众长，独立思考。',ill:'book'},
+{v:3,i:50,w:['经子通','读诸史','考世系','知终始'],t:'经书和子书读通了，再读各种史书，考察帝王世系，了解历史的兴亡始终。',s:'中国有“二十四史”的完整历史记录，这在世界文明中独一无二。读史使人明智：知道朝代如何兴起，又为何衰亡，才能看清今天、看懂未来。',m:'以史为镜，可以知兴替。',ill:'book'},
+
+{v:4,i:51,w:['自羲农','至黄帝','号三皇','居上世'],t:'从伏羲、神农到黄帝，称为“三皇”，生活在远古的上古时代。',s:'伏羲画八卦、教渔猎；神农尝百草、教农耕；黄帝制衣裳、造舟车、定历法，被尊为“人文初祖”。传说中，他们带领先民从蒙昧走向文明。',m:'追本溯源，不忘始祖。',ill:'history'},
+{v:4,i:52,w:['唐有虞','号二帝','相揖逊','称盛世'],t:'尧（陶唐氏）和舜（有虞氏）并称“二帝”，他们禅让帝位，天下太平，称为盛世。',s:'尧舜禅让：尧年老后，没有把帝位传给儿子，而是考察四方，把帝位让给了贤能的舜；舜年老，又禅让给治水有功的禹。“天下为公，选贤任能”，这是中国政治理想的原点。',m:'选贤任能，天下为公。',ill:'yaoshun'},
+{v:4,i:53,w:['夏有禹','商有汤','周文武','称三王'],t:'夏朝的大禹、商朝的成汤、周朝的文王和武王，称为“三王”。',s:'大禹治水，“三过家门而不入”，十三年终于治平洪水；成汤灭夏建商，施行仁政；周文王被囚羑里而演《周易》，周武王吊民伐罪。三代圣王，皆以德服人。',m:'为民造福，得民心者得天下。',ill:'dayu'},
+{v:4,i:54,w:['夏传子','家天下','四百载','迁夏社'],t:'夏禹把王位传给儿子，开始了“家天下”，夏朝传了四百多年，最终灭亡。',s:'禹的儿子启继位，“公天下”变成了“家天下”。夏朝末年，君主夏桀暴虐无道，造酒池肉林、宠信妹喜，百姓怨声载道，最终被商汤所灭。',m:'骄奢失道，必致灭亡。',ill:'history'},
+{v:4,i:55,w:['汤伐夏','国号商','六百载','至纣亡'],t:'成汤讨伐夏桀，建立商朝，传了六百多年，到纣王时灭亡。',s:'商汤仁德，“网开三面”的故事传为美谈；而商纣王宠妲己、设酒池肉林、发明炮烙之刑，残暴无道。周武王在牧野之战一举灭商，民心尽归。',m:'仁德兴邦，暴政亡国。',ill:'history'},
+{v:4,i:56,w:['周武王','始诛纣','八百载','最长久'],t:'周武王讨伐纣王，建立周朝，传了八百年，是历史上最长的朝代。',s:'牧野之战，武王伐纣，顺应民心。周朝建立礼乐制度、分封诸侯、制礼作乐，国祚绵延近八百年，为历代之最。“周虽旧邦，其命维新”，礼乐文明自此奠基。',m:'以德立国，礼乐传家。',ill:'zhougong'},
+{v:4,i:57,w:['周辙东','王纲坠','逞干戈','尚游说'],t:'周平王东迁洛阳后，周天子的权威衰落，诸侯争战不休，游说之风盛行。',s:'平王东迁是春秋时代的开始。此后礼崩乐坏，诸侯争霸，孔子感叹“礼崩乐坏”，于是周游列国十四年，试图恢复礼制，虽未能如愿，却把“仁”的种子撒遍天下。',m:'礼制失序，天下纷争。',ill:'history'},
+{v:4,i:58,w:['始春秋','终战国','五霸强','七雄出'],t:'从春秋到战国，先后有春秋五霸称强，战国七雄争雄。',s:'春秋五霸（齐桓公、晋文公等）尊王攘夷；战国七雄（秦、楚、齐、燕、赵、魏、韩）合纵连横，苏秦张仪凭三寸不烂之舌搅动天下。乱世出英雄，也出思想——百家争鸣就在此时绽放。',m:'乱世纷争，强者生存。',ill:'history'},
+{v:4,i:59,w:['嬴秦氏','始兼并','传二世','楚汉争'],t:'秦始皇嬴政兼并六国，统一天下，但只传了两代，楚汉就开始争霸。',s:'秦始皇统一六国，书同文、车同轨、统一度量衡，功业震古烁今；但他暴政苛法、焚书坑儒，二世而亡。陈胜吴广一句“王侯将相宁有种乎”，点燃了反秦烈火，项羽、刘邦随后逐鹿中原。',m:'得民心者昌，失民心者亡。',ill:'history'},
+{v:4,i:60,w:['高祖兴','汉业建','至孝平','王莽篡'],t:'汉高祖刘邦建立汉朝，传到孝平帝时，被王莽篡位。',s:'刘邦出身布衣，约法三章、善用人才——萧何、张良、韩信各尽其能，终成帝业。西汉末年，外戚王莽篡汉建立新朝，但很快被绿林赤眉起义推翻。',m:'善用人者得天下。',ill:'history'},
+{v:4,i:61,w:['光武兴','为东汉','四百年','终于献'],t:'光武帝刘秀中兴，建立东汉，汉朝前后共四百年，到献帝时结束。',s:'刘秀以“柔道”治国，光武中兴，重振汉室。汉朝四百年，是中华第一个强盛的长命王朝，“汉人”“汉字”“汉族”之名，都源于这个伟大的朝代。',m:'中兴不易，守成更难。',ill:'history'},
+{v:4,i:62,w:['魏蜀吴','争汉鼎','号三国','迄两晋'],t:'魏、蜀、吴三国争夺汉朝天下，史称三国，最后归于两晋。',s:'三国是英雄辈出的时代：桃园结义、赤壁之战、诸葛亮鞠躬尽瘁、关羽千里走单骑……司马氏篡魏建晋，三分归一统。刀光剑影里，写满了忠义与智谋。',m:'分久必合，合久必分。',ill:'history'},
+{v:4,i:63,w:['宋齐继','梁陈承','为南朝','都金陵'],t:'南朝先后有宋、齐、梁、陈四个朝代，都城都在金陵（今南京）。',s:'东晋之后，南方经历宋齐梁陈四朝，史称南朝。建康（南京）六朝繁华，乌衣巷口夕阳斜，留下无数诗篇，也留下灿烂的文化——书法、绘画、佛学在此交汇。',m:'六朝古都，文脉绵长。',ill:'history'},
+{v:4,i:64,w:['北元魏','分东西','宇文周','与高齐'],t:'北方有北魏，后来分裂为东魏西魏，又演变为北周和北齐。',s:'北方经历了北魏、东魏西魏、北周北齐，史称北朝。北魏孝文帝迁都洛阳、推行汉化，促进民族大融合，为隋唐的繁荣埋下伏笔。',m:'民族融合，文化交汇。',ill:'history'},
+{v:4,i:65,w:['迨至隋','一土宇','不再传','失统绪'],t:'到了隋朝，天下重新统一，但只传了一代（两帝），就失去了统治。',s:'隋文帝杨坚统一南北，开创科举、开凿大运河，功业不小；隋炀帝杨广却穷奢极欲、三征高丽，民力耗尽，隋朝二世而亡。大运河至今仍在流淌，见证着一个王朝的功与过。',m:'劳民伤财，速亡之由。',ill:'history'},
+{v:4,i:66,w:['唐高祖','起义师','除隋乱','创国基'],t:'唐高祖李渊起兵，平定隋末之乱，开创大唐基业。',s:'李渊太原起兵，其子李世民南征北战，最终建立唐朝。此后贞观之治、开元盛世，长安成为当时世界最繁华的都市，万国来朝。',m:'乱世英雄起，开创盛世基。',ill:'history'},
+{v:4,i:67,w:['二十传','三百载','梁灭之','国乃改'],t:'唐朝传了二十位皇帝，近三百年，被后梁取代，国号更改。',s:'唐朝是中华文明的巅峰：李白杜甫的诗歌、颜筋柳骨的书法、敦煌壁画的艺术，至今令人仰望。安史之乱后由盛转衰，藩镇割据，最终被朱温篡唐，五代十国拉开帷幕。',m:'盛极而衰，历史规律。',ill:'history'},
+{v:4,i:68,w:['梁唐晋','及汉周','称五代','皆有由'],t:'后梁、后唐、后晋、后汉、后周，称为五代，各有兴亡的原因。',s:'五代十国是唐末藩镇割据的延续，武人当政、王朝更迭如走马灯，五十三年换了八个姓。但乱世中也孕育着新秩序，为宋朝的统一积蓄力量。',m:'治乱循环，天下大势。',ill:'history'},
+{v:4,i:69,w:['炎宋兴','受周禅','十八传','南北混'],t:'赵匡胤建立宋朝（炎宋），接受后周禅让，传了十八代，后分为南北宋。',s:'陈桥兵变，黄袍加身，赵匡胤建立宋朝，“杯酒释兵权”以文制武。宋朝经济文化极为繁荣，GDP冠绝当时，四大发明之三在此成熟；但重文轻武，靖康之变后偏安江南，终亡于元。',m:'文治昌盛，武备不可废。',ill:'history'},
+{v:4,i:70,w:['辽与金','帝号纷','迨灭辽','宋犹存'],t:'辽、金相继称帝建国，辽被金灭时，北宋还存在。',s:'契丹建辽、女真建金，先后崛起于北方。金灭辽后挥师南下，靖康之变，徽钦二帝被掳，北宋灭亡。山河破碎处，正是忠臣泪满襟。',m:'强邻环伺，自强不息。',ill:'history'},
+{v:4,i:71,w:['至元兴','金绪歇','有宋世','一同灭'],t:'元朝兴起，金朝灭亡，南宋也一起被元朝所灭。',s:'蒙古铁骑横扫欧亚，忽必烈建立元朝。南宋崖山海战，陆秀夫背着小皇帝蹈海殉国，十万军民跳海相随；文天祥留下“人生自古谁无死，留取丹心照汗青”，气节千古。',m:'气节千秋，忠义长存。',ill:'history'},
+{v:4,i:72,w:['莅中国','兼戎狄','九十载','国祚废'],t:'元朝入主中原，兼有各族，统治约九十年后灭亡。',s:'元朝疆域空前辽阔，民族众多，却也实行严格的等级制度。不到百年，红巾军起义爆发，朱元璋崛起于乱世，元顺帝北逃，元朝覆灭。',m:'民族团结，方能长久。',ill:'history'},
+{v:4,i:73,w:['太祖兴','国大明','号洪武','都金陵'],t:'明太祖朱元璋起兵，建立明朝，年号洪武，定都金陵（南京）。',s:'朱元璋出身放牛娃、做过和尚，参加红巾军后一步步崛起，最终推翻元朝，建立明朝。从最底层到开国皇帝，他用一生证明：英雄不问出处，奋斗改变命运。',m:'英雄不问出处，奋斗改变命运。',ill:'history'},
+{v:4,i:74,w:['迨成祖','迁燕京','十七世','至崇祯'],t:'到明成祖时迁都北京，明朝传了十七代，到崇祯帝时灭亡。',s:'明成祖朱棣迁都北京，修建紫禁城，派郑和七下西洋，扬威海外。明朝后期宦官专权、党争不断、内忧外患，崇祯帝勤勉却无力回天，最终在煤山自缢，明朝落幕。',m:'励精图治，居安思危。',ill:'history'},
+{v:4,i:75,w:['权阉肆','寇如林','至李闯','神器焚'],t:'宦官专权横行，流寇蜂起，李自成攻入北京，明朝灭亡。',s:'明朝中后期，魏忠贤等宦官专权，厂卫横行；土地兼并、赋税沉重，民不聊生。李自成率起义军攻破北京，崇祯帝自缢于煤山，大明王朝就此终结。',m:'吏治腐败，国必危亡。',ill:'history'},
+{v:4,i:76,w:['清太祖','膺景命','靖四方','克大定'],t:'清太祖努尔哈赤承受天命，平定四方，奠定清朝基业。',s:'努尔哈赤统一女真各部，建立后金；皇太极改国号为清；顺治入关定鼎中原；康熙、雍正、乾隆三朝励精图治，迎来康乾盛世，疆域空前辽阔。',m:'天下大势，分久必合。',ill:'history'},
+{v:4,i:77,w:['廿一史','全在兹','载治乱','知兴衰'],t:'二十一史都记载在这里，记录了治乱兴衰，从中可以知晓历史规律。',s:'从《史记》到《明史》，二十四史完整记录了中华五千年的兴衰轨迹，是世界上独一无二的史学宝库。以史为镜，可知兴替；以人为镜，可明得失。',m:'读史明智，鉴往知来。',ill:'history'},
+{v:4,i:78,w:['读史者','考实录','通古今','若亲目'],t:'读史书的人，要考证真实的史料，通晓古今，就像亲眼所见一样。',s:'历史研究讲究“实录”精神。司马迁写《史记》，实地考察、遍访古迹，“究天人之际，通古今之变，成一家之言”，为写一个字也不肯马虎。',m:'实事求是，求真务实。',ill:'history'},
+
+{v:5,i:79,w:['口而诵','心而惟','朝于斯','夕于斯'],t:'读书要口里诵读，心里思考，早晨如此，晚上也如此。',s:'古人读书讲究“三到”：眼到、口到、心到。朱熹说读书要“熟读精思”，诵与思结合，日日夜夜，才能融会贯通——功夫，就在朝朝暮暮的坚持里。',m:'学思结合，持之以恒。',ill:'study'},
+{v:5,i:80,w:['昔仲尼','师项橐','古圣贤','尚勤学'],t:'从前孔子曾向七岁的项橐请教，古圣先贤尚且如此勤学好问。',s:'孔子周游列国，路遇七岁孩童项橐。项橐问“天上多少星星，地上多少沙子”，孔子答不上来，诚恳地拜他为师。圣人尚且不耻下问，何况我们？“三人行，必有我师焉”，永远虚心。',m:'虚心求教，不耻下问。',ill:'kongzi'},
+{v:5,i:81,w:['赵中令','读鲁论','彼既仕','学且勤'],t:'宋朝宰相赵普每天读《论语》，他做了大官，学习仍然勤奋。',s:'赵普辅佐赵匡胤建立宋朝，官至宰相，却仍手不释卷地读《论语》，甚至病中还读。宋太宗问他治国之道，他说“以半部论语治天下”。位高权重，学而不辍。',m:'活到老，学到老。',ill:'study'},
+{v:5,i:82,w:['披蒲编','削竹简','彼无书','且知勉'],t:'路温舒把蒲草编起来抄书，公孙弘削竹简抄书，他们没有书，尚且知道勤勉。',s:'西汉路温舒家贫无书，用蒲草编成“蒲编”抄书自学；公孙弘削竹子做成竹简抄经。没有书，就自己造书；条件再苦，挡不住一颗求学的心。二人最终都成了大儒。',m:'条件艰苦，更当发奋。',ill:'study'},
+{v:5,i:83,w:['头悬梁','锥刺股','彼不教','自勤苦'],t:'孙敬把头发悬在梁上，苏秦用锥子刺大腿，他们没有人督促，自己刻苦。',s:'东汉孙敬读书到深夜，怕打瞌睡，用绳子把头发吊在房梁上；战国苏秦困倦时用锥子刺自己的大腿，鲜血直流。一个“悬梁”，一个“刺股”，没人逼他们，全靠自律。后来孙敬成为大儒，苏秦佩六国相印。',m:'自强自律，刻苦成才。',ill:'xuanliang'},
+{v:5,i:84,w:['如囊萤','如映雪','家虽贫','学不辍'],t:'像车胤用布袋装萤火虫照明，像孙康映着雪光读书，家里虽穷，学习不停止。',s:'晋代车胤家贫买不起灯油，夏天捉几十只萤火虫装进纱袋，借微光夜读；孙康冬夜无灯，便坐在雪地里映着雪光读书。寒来暑往，二人终成饱学之士。“囊萤映雪”，是逆境里开出的花。',m:'逆境自强，勤学不辍。',ill:'yingxue'},
+{v:5,i:85,w:['如负薪','如挂角','身虽劳','犹苦卓'],t:'像朱买臣背柴时读书，像李密把书挂在牛角上，身体虽劳累，仍然刻苦卓越。',s:'汉代朱买臣靠砍柴为生，把书挂在柴担上，边走边读，妻子因此离开他，他却不改其志，后来官拜会稽太守；隋代李密放牛时，把书挂在牛角上苦读，后来成为瓦岗军领袖。身体再累，心不累。',m:'劳动不忘学习，吃苦方成大器。',ill:'fuxin'},
+{v:5,i:86,w:['苏老泉','二十七','始发愤','读书籍'],t:'苏洵（号老泉）二十七岁才开始发愤读书。',s:'苏洵年轻时游手好闲，直到二十七岁才幡然醒悟，烧掉旧稿，闭门苦读。妻子劝他，他说“吾今而知晓学问矣”。几年后他带着两个儿子进京赶考，一门三父子，同列“唐宋八大家”，传为千古佳话。',m:'立志不怕晚，努力正当时。',ill:'suquan'},
+{v:5,i:87,w:['彼既老','犹悔迟','尔小生','宜早思'],t:'苏洵年纪大了，还后悔读书太迟；你们这些少年，应该早点思考这个问题。',s:'苏洵曾感叹自己“少年不学，老大徒伤悲”，并把这份遗憾写进家训。他用亲身经历告诉后人：立志不怕晚，但越早越好——少年正是读书时，莫待老来空叹息。',m:'少壮须努力，老大不伤悲。',ill:'suquan'},
+{v:5,i:88,w:['若梁灏','八十二','对大廷','魁多士'],t:'梁灏八十二岁才在朝廷殿试中夺魁，名列众考生第一。',s:'五代梁灏屡考不中，却始终不肯放弃，一直考到八十二岁，终于在殿试中高中状元。皇帝问他感想，他说：“皓首穷经，志在报国。”活到老，学到老，考到老，这是怎样的坚持！',m:'学无止境，大器晚成。',ill:'lianghao'},
+{v:5,i:89,w:['彼既成','众称异','尔小生','宜立志'],t:'梁灏年老成功，众人都称奇；你们这些少年，更应早立志向。',s:'八十二岁的状元，让全天下都为之侧目。立志不分早晚，但越早越好——少年立志，如春日播种，秋日方能收获；今日播下的志向，就是明日长成的参天大树。',m:'少年立志，未来可期。',ill:'lianghao'},
+{v:5,i:90,w:['莹八岁','能咏诗','泌七岁','能赋棋'],t:'祖莹八岁就能吟诗，李泌七岁就能以棋为题作赋。',s:'北朝祖莹八岁能背《诗》《书》，人称“圣小儿”；唐朝李泌七岁在唐玄宗面前以棋为题作赋，惊动朝堂，人称“神童”。天赋固然可贵，但更可贵的是他们背后的勤奋。',m:'天才出于勤奋。',ill:'study'},
+{v:5,i:91,w:['彼颖悟','人称奇','尔幼学','当效之'],t:'他们聪慧过人，人人称奇；你们年幼求学，应当效仿他们。',s:'神童并非天生的奇迹，而是汗水浇灌的结果。看到榜样，最好的回应不是羡慕，而是效仿——见贤思齐，勤能补拙，你也可以成为别人眼中的光。',m:'见贤思齐，勤能补拙。',ill:'study'},
+{v:5,i:92,w:['蔡文姬','能辨琴','谢道韫','能咏吟'],t:'蔡文姬能辨别琴音，谢道韫能吟诗咏雪。',s:'蔡文姬听父亲弹琴，琴弦断了，她一听便知断的是第几根，还能听出琴声中的心事；谢道韫咏雪，“未若柳絮因风起”一句，惊艳千古。才女的背后，是书香世家的熏陶与自己的苦学。',m:'才女典范，不让须眉。',ill:'study'},
+{v:5,i:93,w:['彼女子','且聪敏','尔男子','当自警'],t:'她们是女子，尚且聪慧敏捷；你们男子汉，更应当警醒自勉。',s:'古人用才女激励男子读书，今天读来，这句话更提醒我们：学习面前人人平等，无论男女，只要勤学，都能成才。别让性别、身份成为偷懒的借口。',m:'勤学面前，人人平等。',ill:'study'},
+{v:5,i:94,w:['唐刘晏','方七岁','举神童','作正字'],t:'唐朝刘晏七岁就被举为神童，担任“正字”官。',s:'刘晏七岁献赋，唐玄宗惊为神童，授予他“正字”之职，负责校对文字。玄宗问他：“正字，正得几字？”他答：“天下字皆正，唯‘朋’字不正。”一语双关，劝谏朝廷慎交朋友，小小年纪智慧惊人。',m:'少年成才，报效国家。',ill:'liuyan'},
+{v:5,i:95,w:['彼虽幼','身已仕','尔幼学','勉而致'],t:'刘晏虽然年幼，已入朝为官；你们年幼求学，只要努力也能达到。',s:'刘晏后来成为唐代著名的理财家，在安史之乱后重振国家经济，功勋卓著。他告诉我们：年龄不是界限，努力才是通行证——别人能做到的，你也能。',m:'勤学可至，人人可为。',ill:'liuyan'},
+{v:5,i:96,w:['有为者','亦若是','犬守夜','鸡司晨'],t:'有作为的人，也就像这样（从小努力）。狗在夜里看守门户，公鸡在清晨报晓。',s:'万物各尽其责：犬守夜、鸡司晨、蚕吐丝、蜂酿蜜。连动物都知道尽自己的本分，何况万物之灵的人？读书，就是少年人的本分。',m:'各尽其责，人当勤学。',ill:'study'},
+{v:5,i:97,w:['苟不学','曷为人','蚕吐丝','蜂酿蜜'],t:'如果不学习，凭什么做人呢？蚕会吐丝，蜂会酿蜜。',s:'蚕吐丝织成衣，蜂酿蜜供人食，连小昆虫都在为世界贡献力量。人若不学无术、无所作为，岂不愧对万物之灵的称号？学有所成，方能成为有用之人。',m:'学有所成，方为有用之人。',ill:'study'},
+{v:5,i:98,w:['人不学','不如物','幼而学','壮而行'],t:'人不学习，连动物都不如。年幼时学习，长大后施展才能。',s:'“学以致用”：幼学是储备，壮行是实践。陆游说“纸上得来终觉浅，绝知此事要躬行”——把书上的道理用到生活里，学问才算真正长在了身上。',m:'知行合一，学以致用。',ill:'study'},
+{v:5,i:99,w:['上致君','下泽民','扬名声','显父母'],t:'对上能报效国家，对下能造福百姓，扬名立万，光耀父母。',s:'古代读书人的理想是“修身齐家治国平天下”。今天，这份理想依然滚烫：好好学习，将来用所学服务社会、回报家人——你发光的样子，就是父母最大的骄傲。',m:'学有所成，服务社会。',ill:'study'},
+{v:5,i:100,w:['光于前','裕于后','人遗子','金满籯'],t:'光耀祖宗，造福后代。别人留给子孙满箱的金子。',s:'古人说“遗子黄金满籯，不如一经”——留给子孙满箱黄金，不如教给他一部经书。物质财富会花完，学问品格却受用一生。精神的家底，才是真正的传家宝。',m:'精神财富胜过物质财富。',ill:'study'},
+{v:5,i:101,w:['我教子','惟一经','勤有功','戏无益'],t:'我教育孩子，只教他一经（经典学问）。勤奋必有收获，贪玩没有益处。',s:'古人家训的核心就六个字：勤有功，戏无益。韩愈说“业精于勤，荒于嬉；行成于思，毁于随”。玩耍是童年的快乐，但若一味贪玩、荒废学业，终将一事无成。',m:'勤学有功，玩物丧志。',ill:'study'},
+{v:5,i:102,w:['戒之哉','宜勉力'],t:'要以此为戒啊！应当勤勉努力！',s:'全书以六个字收尾：“戒之哉，宜勉力”——以此为戒，勤勉努力。这是古人对后辈最深情的叮咛，也是这本书真正要送给你的礼物：从今天起，好好读书，好好做人。',m:'自勉自励，善始善终。',ill:'study'}
+];
+
+/* =========================================================
+   水墨插画 SVG（key → 生成函数）
+========================================================= */
+const ILLUS = {
+  base:(inner)=>`<svg viewBox="0 0 280 170" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a63b2c" stop-opacity=".10"/><stop offset="1" stop-color="#3d5a52" stop-opacity=".08"/></linearGradient></defs>
+    <rect width="280" height="170" fill="url(#g1)"/>
+    <circle cx="240" cy="26" r="22" fill="#a63b2c" opacity=".07"/>
+    <path d="M0 150 Q70 120 140 138 T280 128 L280 170 L0 170 Z" fill="#3d5a52" opacity=".14"/>
+    <path d="M0 162 Q90 140 200 152 T280 146 L280 170 L0 170 Z" fill="#2e2a24" opacity=".10"/>
+    ${inner}
+  </svg>`,
+  home:(lbl)=>ILLUS.base(`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".85">
+    <path d="M140 118 L70 78 L60 84 L60 60 L78 68 L78 40 L118 58 L140 44 L222 92 L222 118 L140 118 Z" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M84 118 L84 84 L196 118 Z" fill="#a63b2c" fill-opacity=".12"/>
+    <rect x="122" y="94" width="36" height="24" fill="#f6f0e3" stroke="#5c554a"/>
+  </g>
+  <path d="M52 44 Q60 38 68 44" stroke="#5c554a" stroke-width="1.6" fill="none" opacity=".5"/>
+  <text x="140" y="148" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">家·教</text>`),
+  mengmu:(lbl)=>ILLUS.base(`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".85">
+    <rect x="52" y="44" width="66" height="52" rx="3" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M56 96 L56 50 L112 50 L112 96 M84 50 L84 44 M60 62 L104 62 M60 72 L104 72 M60 82 L96 82" />
+    <path d="M186 96 L150 44 L176 30 L214 88 Z" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M176 30 L214 88 L150 44 Z" fill="#a63b2c" fill-opacity=".10"/>
+    <path d="M118 128 Q132 100 158 116 M132 100 Q140 94 150 102" stroke="#5c554a" stroke-width="2" fill="none"/>
+    <circle cx="168" cy="112" r="5" fill="#5c554a"/>
+    <path d="M160 128 Q168 122 178 128" stroke="#5c554a" stroke-width="2" fill="none"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">孟母断机</text>`),
+  kongrong:(lbl)=>ILLUS.base(`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".85">
+    <path d="M70 108 Q140 92 210 108 L204 84 L76 84 Z" fill="#f6f0e3" fill-opacity=".5"/>
+    <circle cx="104" cy="76" r="11" fill="#f6f0e3" stroke="#5c554a"/>
+    <circle cx="132" cy="72" r="14" fill="#f6f0e3" stroke="#5c554a"/>
+    <circle cx="164" cy="72" r="14" fill="#f6f0e3" stroke="#5c554a"/>
+    <circle cx="196" cy="76" r="11" fill="#f6f0e3" stroke="#5c554a"/>
+    <path d="M124 40 Q124 28 136 28 M156 40 Q156 26 170 26" stroke="#a63b2c" stroke-width="2.4"/>
+    <path d="M104 76 Q96 52 104 44 M132 72 Q126 46 132 38" stroke="#a63b2c" stroke-width="2"/>
+    <circle cx="120" cy="48" r="4" fill="#a63b2c" opacity=".7"/>
+  </g>
+  <text x="140" y="150" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">孔融让梨</text>`),
+  huangxiang:(lbl)=>ILLUS.base(`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".85">
+    <rect x="90" y="52" width="116" height="40" rx="6" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M90 92 Q148 106 206 92" stroke="#a63b2c" stroke-width="2.4" opacity=".7"/>
+    <path d="M140 52 L140 38 Q140 30 148 30 L154 30 Q162 30 162 38 L162 52" />
+    <circle cx="128" cy="66" r="5" fill="#5c554a"/>
+    <path d="M128 84 Q128 96 136 100 M128 84 Q128 98 120 102" stroke="#5c554a" stroke-width="1.8"/>
+    <path d="M84 44 Q92 36 100 44" stroke="#5c554a" stroke-width="1.6" opacity=".5"/>
+    <path d="M198 44 Q206 36 214 44" stroke="#5c554a" stroke-width="1.6" opacity=".5"/>
+  </g>
+  <text x="140" y="150" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">黄香温席</text>`),
+  sun:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <circle cx="140" cy="66" r="30" fill="#b08d3e" fill-opacity=".10" stroke="#b08d3e" opacity=".8"/>
+    <circle cx="78" cy="104" r="8" fill="#a63b2c" fill-opacity=".25" stroke="none"/>
+    <circle cx="212" cy="96" r="12" fill="#a63b2c" fill-opacity=".18" stroke="none"/>
+    <circle cx="232" cy="56" r="6" fill="#a63b2c" fill-opacity=".22" stroke="none"/>
+    <path d="M52 60 Q62 52 72 60 M208 50 Q218 42 228 50" opacity=".5"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">天地人 · 日月星</text>`),
+  scroll:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <rect x="84" y="44" width="112" height="82" rx="4" fill="#f6f0e3" fill-opacity=".55"/>
+    <path d="M84 44 L84 126 M196 44 L196 126" stroke="#a63b2c" stroke-width="2.4"/>
+    <path d="M92 58 L188 58 M92 66 L188 66 M92 74 L188 74" stroke="#3d5a52" stroke-width="1.8" opacity=".55"/>
+    <path d="M92 88 Q100 84 108 88 Q116 92 124 88 Q132 84 140 88 Q148 92 156 88 Q164 84 172 88 Q180 92 188 88" stroke="#a63b2c" stroke-width="1.8" opacity=".7"/>
+    <circle cx="140" cy="106" r="7" fill="#a63b2c" fill-opacity=".25" stroke="none"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">书·卷</text>`),
+  book:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M140 44 Q112 34 86 40 L86 116 Q112 110 140 120 Q168 110 194 116 L194 40 Q168 34 140 44 Z" fill="#f6f0e3" fill-opacity=".55"/>
+    <path d="M140 44 L140 120" stroke="#a63b2c" stroke-width="1.8"/>
+    <path d="M96 58 L130 60 M96 70 L130 72 M150 62 L184 60 M150 74 L184 72" stroke="#3d5a52" stroke-width="1.6" opacity=".5"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">经·典</text>`),
+  zhougong:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M140 116 L140 52" />
+    <path d="M140 52 Q140 40 152 38 M140 52 Q140 40 128 38" stroke="#a63b2c" stroke-width="2.4"/>
+    <circle cx="140" cy="66" r="4" fill="#5c554a"/>
+    <path d="M140 92 Q128 86 118 96 M140 92 Q152 86 162 96" />
+    <path d="M96 120 L120 112 M184 120 L160 112" stroke="#b08d3e" stroke-width="2.4"/>
+    <rect x="52" y="128" width="176" height="14" rx="4" fill="#b08d3e" fill-opacity=".15" stroke="#b08d3e" opacity=".6"/>
+    <path d="M60 116 L220 116" stroke="#5c554a" stroke-width="1.4" opacity=".4"/>
+  </g>
+  <text x="140" y="158" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">周公制礼</text>`),
+  yaoshun:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M120 96 L140 118 L160 96 Z" fill="#a63b2c" fill-opacity=".14"/>
+    <path d="M112 120 L140 146 L168 120 Z" fill="#3d5a52" fill-opacity=".12"/>
+    <circle cx="140" cy="74" r="18" fill="#b08d3e" fill-opacity=".12" stroke="#b08d3e" opacity=".7"/>
+    <path d="M88 44 Q96 36 104 44 M176 44 Q184 36 192 44" opacity=".5"/>
+  </g>
+  <text x="140" y="158" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">尧舜禅让</text>`),
+  dayu:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M60 84 Q100 68 140 84 Q180 100 220 84 L220 108 Q180 124 140 108 Q100 92 60 108 Z" fill="#3d5a52" fill-opacity=".14"/>
+    <path d="M140 96 L140 78 M136 78 Q140 70 144 78" stroke="#a63b2c" stroke-width="2.4"/>
+    <path d="M128 62 L152 62 M136 56 L144 56" stroke="#b08d3e" stroke-width="2"/>
+    <circle cx="212" cy="52" r="16" fill="#b08d3e" fill-opacity=".10" stroke="#b08d3e" opacity=".7"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">大禹治水</text>`),
+  history:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M40 118 Q90 84 140 102 Q190 120 240 88 L240 118 Z" fill="#3d5a52" fill-opacity=".14"/>
+    <path d="M40 100 Q90 66 140 84 Q190 102 240 70" stroke="#a63b2c" stroke-width="1.8" opacity=".5"/>
+    <circle cx="214" cy="52" r="7" fill="#a63b2c" fill-opacity=".25"/>
+    <circle cx="66" cy="58" r="5" fill="#a63b2c" fill-opacity=".2"/>
+    <path d="M150 58 L166 50 M166 50 L178 58" stroke="#5c554a" stroke-width="2.4"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">山河·史</text>`),
+  study:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <rect x="96" y="76" width="96" height="42" rx="4" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M96 76 L96 62 Q96 56 102 56 L112 56 Q118 56 118 62 L118 76" />
+    <path d="M88 118 L200 118" stroke="#a63b2c" stroke-width="2"/>
+    <path d="M112 34 Q124 26 136 32" stroke="#a63b2c" stroke-width="2.6"/>
+    <circle cx="148" cy="90" r="6" fill="#a63b2c" fill-opacity=".7"/>
+    <path d="M126 90 L148 84 L170 92" stroke="#3d5a52" stroke-width="1.8" opacity=".6"/>
+    <circle cx="196" cy="40" r="14" fill="#b08d3e" fill-opacity=".12" stroke="#b08d3e" opacity=".7"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">夜读</text>`),
+  xuanliang:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M60 40 L220 40" stroke="#a63b2c" stroke-width="3"/>
+    <path d="M140 40 L140 56 Q140 66 132 70 L132 84" stroke="#5c554a" stroke-width="1.8"/>
+    <circle cx="132" cy="90" r="7" fill="#f6f0e3" stroke="#5c554a"/>
+    <rect x="112" y="98" width="40" height="30" rx="3" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M120 106 L144 106 M120 114 L138 114" stroke="#3d5a52" stroke-width="1.6" opacity=".55"/>
+    <circle cx="202" cy="52" r="12" fill="#b08d3e" fill-opacity=".12" stroke="#b08d3e" opacity=".7"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">悬梁</text>`),
+  yingxue:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <circle cx="200" cy="44" r="15" fill="#b08d3e" fill-opacity=".12" stroke="#b08d3e" opacity=".7"/>
+    <path d="M60 100 Q80 78 104 92 Q112 96 108 106 L96 118 Z" fill="#f6f0e3" fill-opacity=".45"/>
+    <path d="M60 100 Q78 82 100 94" stroke="#5c554a"/>
+    <circle cx="84" cy="92" r="3" fill="#a63b2c" opacity=".7"/>
+    <circle cx="96" cy="98" r="2.4" fill="#a63b2c" opacity=".6"/>
+    <circle cx="90" cy="104" r="2" fill="#a63b2c" opacity=".5"/>
+    <path d="M126 118 L162 118 M132 110 L156 110 M138 102 L150 102" stroke="#3d5a52" stroke-width="1.8" opacity=".5"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">囊萤映雪</text>`),
+  fuxin:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M88 118 L120 44 L136 44 L110 118 Z" fill="#3d5a52" fill-opacity=".14"/>
+    <path d="M96 118 L126 48 M112 118 L140 52" stroke="#5c554a" stroke-width="1.8" opacity=".6"/>
+    <circle cx="118" cy="56" r="4" fill="#f6f0e3" stroke="#5c554a"/>
+    <path d="M164 118 Q176 64 216 46 M168 118 Q180 66 218 50" stroke="#5c554a" stroke-width="2.4"/>
+    <circle cx="206" cy="52" r="5" fill="#f6f0e3" stroke="#5c554a"/>
+    <circle cx="222" cy="44" r="14" fill="#b08d3e" fill-opacity=".12" stroke="#b08d3e" opacity=".7"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">负薪挂角</text>`),
+  suquan:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <rect x="86" y="52" width="108" height="66" rx="4" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M86 52 L86 118 M194 52 L194 118" stroke="#a63b2c" stroke-width="2.4"/>
+    <path d="M94 66 L186 66 M94 74 L186 74 M94 82 L186 82" stroke="#3d5a52" stroke-width="1.8" opacity=".55"/>
+    <path d="M140 118 L140 140 M132 140 L148 140" stroke="#5c554a" stroke-width="2"/>
+    <circle cx="222" cy="46" r="14" fill="#b08d3e" fill-opacity=".12" stroke="#b08d3e" opacity=".7"/>
+  </g>
+  <text x="140" y="158" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">苏洵发愤</text>`),
+  lianghao:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M140 120 L140 62" stroke="#a63b2c" stroke-width="2.6"/>
+    <path d="M140 66 Q140 56 150 54 M140 66 Q140 56 130 54" />
+    <circle cx="140" cy="76" r="4" fill="#5c554a"/>
+    <path d="M140 96 Q130 92 122 100 M140 96 Q150 92 158 100" />
+    <rect x="64" y="128" width="152" height="14" rx="4" fill="#b08d3e" fill-opacity=".15" stroke="#b08d3e" opacity=".6"/>
+    <path d="M72 116 L208 116" stroke="#5c554a" stroke-width="1.4" opacity=".4"/>
+  </g>
+  <text x="140" y="158" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">梁灏登科</text>`),
+  kongzi:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <circle cx="104" cy="70" r="7" fill="#f6f0e3" stroke="#5c554a"/>
+    <path d="M94 92 Q104 82 114 92 L108 118 L100 118 Z" fill="#f6f0e3" fill-opacity=".5"/>
+    <circle cx="176" cy="62" r="9" fill="#f6f0e3" stroke="#5c554a"/>
+    <path d="M164 88 Q176 76 188 88 L180 120 L172 120 Z" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M104 70 Q96 54 106 46 M106 46 Q112 42 118 46" stroke="#a63b2c" stroke-width="1.8" opacity=".7"/>
+    <path d="M84 62 Q70 66 60 76 M60 76 L64 90" stroke="#5c554a" stroke-width="1.8" opacity=".6"/>
+    <circle cx="208" cy="46" r="13" fill="#b08d3e" fill-opacity=".12" stroke="#b08d3e" opacity=".7"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">孔子师项橐</text>`),
+  liuyan:(lbl)=>ILLUS.base(`<g fill="none" stroke="#5c554a" stroke-width="2.2" stroke-linecap="round" opacity=".85">
+    <path d="M70 120 L210 120 M70 120 L70 66 Q70 58 78 58 L118 58 Q126 58 126 66 L126 120" fill="#f6f0e3" fill-opacity=".45"/>
+    <path d="M98 76 L98 104 M112 76 L112 104" stroke="#a63b2c" stroke-width="2.4"/>
+    <circle cx="178" cy="74" r="6" fill="#f6f0e3" stroke="#5c554a"/>
+    <path d="M170 96 Q178 90 186 96 L182 118 L174 118 Z" fill="#f6f0e3" fill-opacity=".5"/>
+    <path d="M214 46 Q222 38 230 46" stroke="#5c554a" stroke-width="1.6" opacity=".5"/>
+  </g>
+  <text x="140" y="152" text-anchor="middle" font-size="12" fill="#6b5b45" font-family="KaiTi,serif" letter-spacing="4">刘晏正字</text>`)
+};
+function illuSVG(key,lbl){return ILLUS[key]? ILLUS[key](lbl) : ILLUS.scroll(lbl)}
+
+/* =========================================================
+   水墨意象画库：每句一句画
+   ELEMS: 图形元素（100x100 视窗内绘制）
+   SEAL : 字印元素（人物/动物以楷书朱印表示）
+========================================================= */
+const SEAL = ch => `<g><rect x="28" y="24" width="44" height="44" rx="7" fill="#f6f0e3" fill-opacity=".45" stroke="#a63b2c" stroke-width="2.4" opacity=".85"/><text x="50" y="55" text-anchor="middle" font-size="30" font-family="KaiTi,'楷体',serif" fill="#8a2f22">${ch}</text></g>`;
+const ELEMS = {
+  sun:`<g stroke="#b08d3e" stroke-width="2.2" fill="none" stroke-linecap="round"><circle cx="50" cy="50" r="17" opacity=".4"/><circle cx="50" cy="50" r="10" fill="#b08d3e" opacity=".75" stroke="none"/><path d="M50 22 L50 29 M50 71 L50 78 M22 50 L29 50 M71 50 L78 50 M30 30 L35 35 M65 65 L70 70 M30 70 L35 65 M65 35 L70 30"/></g>`,
+  moon:`<g stroke="#b08d3e" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M62 26 A22 22 0 1 0 62 74 A17 17 0 1 1 62 26 Z"/><circle cx="44" cy="40" r="2" fill="#a63b2c" opacity=".5"/></g>`,
+  star:`<g fill="#a63b2c"><circle cx="36" cy="34" r="3" opacity=".65"/><circle cx="62" cy="28" r="2.3" opacity=".5"/><circle cx="72" cy="52" r="3.4" opacity=".7"/><circle cx="30" cy="58" r="2.2" opacity=".5"/><circle cx="50" cy="20" r="2" opacity=".45"/></g>`,
+  cloud:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".62"><path d="M28 62 Q28 44 46 44 Q50 32 66 36 Q76 30 80 42 Q94 44 90 58 Q92 68 78 68 L34 68 Q24 68 28 62 Z" fill="#f6f0e3" fill-opacity=".4"/></g>`,
+  mount:`<g stroke="#5c554a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".55"><path d="M6 80 L34 28 L52 62 L66 24 L94 80 Z" fill="#3d5a52" fill-opacity=".10"/><path d="M22 86 L46 46 L62 68 L78 38 L98 86 Z" fill="#3d5a52" fill-opacity=".07"/></g>`,
+  wave:`<g stroke="#3d5a52" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"><path d="M16 50 Q28 42 40 50 Q52 58 64 50 Q76 42 88 50"/><path d="M16 66 Q28 58 40 66 Q52 74 64 66 Q76 58 88 66"/></g>`,
+  bird:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".7"><path d="M22 44 Q33 30 44 44 M33 36 L35 47"/><path d="M50 54 Q61 40 72 54 M61 46 L63 57"/></g>`,
+  tree:`<g stroke="#5c554a" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M50 80 L50 54"/><circle cx="50" cy="38" r="22" fill="#3d5a52" fill-opacity=".16" stroke="none"/><path d="M50 38 Q44 28 38 32 M50 38 Q58 26 64 30" opacity=".6"/></g>`,
+  bamboo:`<g stroke="#3d5a52" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".85"><path d="M34 84 L38 40 M38 56 L30 48 M38 46 L46 40"/><path d="M50 86 L50 32 M50 52 L42 46 M50 44 L58 38"/><path d="M66 84 L62 42 M62 54 L70 48 M62 46 L54 42"/></g>`,
+  pine:`<g stroke="#3d5a52" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M50 82 L50 58"/><path d="M50 28 L50 58 M50 34 L24 52 M50 34 L76 52 M50 46 L28 60 M50 46 L72 60 M50 58 L34 68 M50 58 L66 68" stroke-width="3"/></g>`,
+  plum:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M20 78 Q50 60 78 32"/><path d="M40 62 Q34 56 36 50 M56 48 Q52 42 56 36 M46 68 Q42 64 40 66"/><circle cx="36" cy="50" r="4.2" fill="#a63b2c" opacity=".8"/><circle cx="56" cy="36" r="4.2" fill="#a63b2c" opacity=".8"/><circle cx="66" cy="42" r="3.2" fill="#a63b2c" opacity=".7"/><circle cx="40" cy="66" r="3.2" fill="#a63b2c" opacity=".7"/></g>`,
+  lotus:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".9"><path d="M50 66 Q50 52 50 44 M50 58 Q38 50 34 42 M50 58 Q62 50 66 42 M50 54 Q44 44 46 38 M50 54 Q56 44 54 38" stroke-width="2.6"/><circle cx="50" cy="40" r="2.8" fill="#a63b2c" stroke="none"/><path d="M30 74 Q50 64 70 74" stroke-width="2.4"/></g>`,
+  house:`<g stroke="#5c554a" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M26 76 L50 46 L74 76 Z" fill="#f6f0e3" fill-opacity=".5"/><path d="M26 76 L26 90 L74 90 L74 76"/><rect x="45" y="78" width="10" height="12"/></g>`,
+  pagoda:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M50 26 L50 80"/><path d="M32 42 L68 42 L64 54 L36 54 Z" fill="#f6f0e3" fill-opacity=".45"/><path d="M38 58 L62 58 L58 68 L42 68 Z" fill="#f6f0e3" fill-opacity=".45"/><path d="M44 72 L56 72"/><path d="M28 38 L72 38 L62 26 L38 26 Z" fill="#a63b2c" fill-opacity=".18"/></g>`,
+  boat:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M20 58 Q50 72 80 58 Z" fill="#f6f0e3" fill-opacity=".5"/><path d="M50 60 L50 40 M50 40 Q52 36 58 36"/><path d="M24 68 Q50 78 76 68" stroke-width="1.6" opacity=".5"/></g>`,
+  bridge:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M12 62 Q50 22 88 62" fill="#f6f0e3" fill-opacity=".4"/><path d="M22 62 L78 62"/><path d="M16 74 Q50 40 84 74" opacity=".4" stroke-width="1.6"/></g>`,
+  fish:`<g stroke="#3d5a52" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M20 56 Q34 42 52 46 Q68 50 72 56 Q68 62 52 66 Q34 70 20 56 Z" fill="#f6f0e3" fill-opacity=".45"/><path d="M72 56 L84 48 M72 56 L84 64"/><circle cx="38" cy="53" r="1.8" fill="#5c554a" stroke="none"/></g>`,
+  book:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M50 38 Q30 32 14 36 L14 78 Q30 74 50 80 Q70 74 86 78 L86 36 Q70 32 50 38 Z" fill="#f6f0e3" fill-opacity=".5"/><path d="M50 38 L50 80" stroke="#a63b2c" stroke-width="2"/><path d="M22 46 L42 48 M22 54 L42 56 M22 62 L42 64 M58 48 L78 46 M58 56 L78 54 M58 64 L78 62" stroke-width="1.6" opacity=".55"/></g>`,
+  lamp:`<g stroke="#a63b2c" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M50 84 L50 64 M50 64 Q36 60 36 50 Q36 40 50 40 Q64 40 64 50 Q64 60 50 64" fill="#f6f0e3" fill-opacity=".4"/><path d="M50 44 Q45 40 50 34 Q55 40 50 44 Z" fill="#b08d3e" opacity=".9" stroke="none"/></g>`,
+  sword:`<g stroke="#5c554a" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M76 20 L30 66 M30 66 L22 78 M30 66 L42 58 M22 78 L34 70"/><path d="M76 20 L84 12" stroke-width="3"/><circle cx="80" cy="16" r="2.4" fill="#a63b2c" stroke="none"/></g>`,
+  lute:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round"><rect x="20" y="42" width="60" height="20" rx="10" fill="#a63b2c" fill-opacity=".08"/><path d="M28 47 L72 47 M28 52 L72 52 M28 57 L72 57 M32 42 L32 62 M68 42 L68 62" stroke-width="1.4" opacity=".6"/></g>`,
+  bell:`<g stroke="#b08d3e" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M32 56 Q32 32 50 32 Q68 32 68 56 L68 64 Q68 70 60 70 L40 70 Q32 70 32 64 Z" fill="#b08d3e" fill-opacity=".12"/><path d="M38 78 L62 78 M42 84 L58 84"/><circle cx="50" cy="42" r="2.4" fill="#a63b2c" stroke="none"/></g>`,
+  drum:`<g stroke="#a63b2c" stroke-width="2.2" fill="none" stroke-linecap="round"><rect x="26" y="42" width="48" height="28" rx="14" fill="#a63b2c" fill-opacity=".1"/><path d="M36 42 L36 70 M64 42 L64 70" opacity=".6"/><circle cx="50" cy="56" r="2.6" fill="#a63b2c" stroke="none"/></g>`,
+  grain:`<g stroke="#b08d3e" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M50 86 L50 42"/><path d="M50 50 Q37 48 33 40 M50 55 Q39 53 35 45 M50 60 Q39 58 35 50" stroke-width="2.6"/><path d="M50 50 Q63 48 67 40 M50 55 Q61 53 65 45 M50 60 Q61 58 65 50" stroke-width="2.6"/></g>`,
+  cart:`<g stroke="#5c554a" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="28" y="46" width="36" height="22" fill="#f6f0e3" fill-opacity=".4"/><circle cx="39" cy="78" r="9"/><circle cx="59" cy="78" r="9"/><path d="M28 52 L16 44 M28 60 L16 56" stroke-width="2.2"/></g>`,
+  pen:`<g stroke="#5c554a" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M64 22 L30 56 L26 70 L40 66 L72 34 Z" fill="#f6f0e3" fill-opacity=".35"/><path d="M30 56 L40 66" opacity=".7"/></g>`,
+  mat:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round"><rect x="20" y="42" width="60" height="28" rx="7" fill="#f6f0e3" fill-opacity=".4"/><path d="M28 51 L72 51 M28 60 L72 60" stroke-width="1.6" opacity=".5"/></g>`,
+  jade:`<g stroke="#3d5a52" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M36 40 Q50 30 64 36 L68 56 Q58 72 42 68 L34 52 Z" fill="#3d5a52" fill-opacity=".14"/><path d="M43 46 Q52 43 58 48" stroke-width="1.6" opacity=".6"/><path d="M52 54 Q50 60 54 62" stroke-width="1.4" opacity=".5"/></g>`,
+  loom:`<g stroke="#5c554a" stroke-width="2.2" fill="none" stroke-linecap="round"><rect x="26" y="40" width="48" height="28" rx="4" fill="#f6f0e3" fill-opacity=".35"/><path d="M34 46 L66 46 M34 54 L66 54 M34 62 L66 62" stroke-width="1.6" opacity=".55"/><path d="M26 40 L34 30 M74 40 L66 30 M28 68 L20 80 M72 68 L80 80"/></g>`,
+  pear:`<g stroke="#b08d3e" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M43 46 Q38 60 43 68 Q50 80 59 68 Q64 58 59 48 Q53 42 43 46 Z" fill="#b08d3e" fill-opacity=".18"/><path d="M50 44 Q52 38 58 36" stroke="#5c554a" stroke-width="2.2"/></g>`,
+  kid:SEAL('童'), adult:SEAL('人'), mother:SEAL('母'), king:SEAL('帝'),
+  ox:SEAL('牛'), horse:SEAL('马'), sheep:SEAL('羊'), rooster:SEAL('鸡'), dog:SEAL('犬'), pig:SEAL('豕')
+};
+const FAR=['sun','moon','star','cloud','mount','wave','bird'];
+function sceneSVG(sc){
+  if(!sc)sc='cloud,wave';
+  const els=sc.split('|')[0];
+  const list=els.split(',').map(s=>s.trim()).filter(Boolean);
+  const fars=list.filter(k=>FAR.includes(k)).slice(0,2);
+  const nears=list.filter(k=>!FAR.includes(k)).slice(0,3);
+  const fx=[60,152], fy=[6,0];
+  const nx=[40,100,160], ny=[30,22,30];
+  return `<svg viewBox="0 0 280 150" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="sgG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a63b2c" stop-opacity=".06"/><stop offset="1" stop-color="#3d5a52" stop-opacity=".06"/></linearGradient></defs>
+    <rect width="280" height="150" fill="url(#sgG)"/>
+    <path d="M0 128 Q70 110 140 120 T280 114 L280 150 L0 150 Z" fill="#3d5a52" opacity=".12"/>
+    <path d="M0 142 Q90 128 200 136 T280 130 L280 150 L0 150 Z" fill="#2e2a24" opacity=".08"/>
+    ${fars.map((k,i)=>`<g transform="translate(${fx[i]-50},${fy[i]})">${ELEMS[k]}</g>`).join('')}
+    ${nears.map((k,i)=>`<g transform="translate(${nx[i]-50},${ny[i]}) scale(.84)">${ELEMS[k]}</g>`).join('')}
+  </svg>`;
+}
+
+/* =========================================================
+   句画场景配置：102 则 × 每句
+   格式 '元素,元素,...|意象题词'（远景元素自动放上层）
+========================================================= */
+const SCENES=[
+['sun,kid|初生赤子','lotus,cloud|善心如莲','tree,tree|双木比邻','boat,boat,wave|两舟各远'],
+['cloud,wave|阴云蔽日','wave,fish|流水易迁','book,pen|授业解惑','lamp,book|秉烛专一'],
+['mother,kid|慈母教子','house,house,house|三迁择邻','kid,book|逃学弃读','loom,mother|断机明志'],
+['adult,kid,kid|义方教子','book,pen|义学传道','kid,kid,kid|五子同读','bird,bird|声名远扬'],
+['mother,kid|养而不教','adult,kid|为父之责','book,pen|师教不严','lamp,cloud|怠惰如昏'],
+['kid,book|幼子厌学','cloud,cloud|于理不宜','kid,kid|少不更学','adult,adult|老大无成'],
+['mount,jade|璞玉未琢','jade,lotus|玉成其器','kid,book|人不求学','cloud,cloud|义理不明'],
+['kid,kid|为人子女','sun,cloud|年少光阴','kid,adult|亲近师友','book,bell|习礼知仪'],
+['kid,mat|黄香年幼','mat,lamp|冬夜温席','mother,kid|孝亲之忱','lotus,lamp|孝心当持'],
+['kid,pear|孔融四岁','pear,pear|让梨之谦','kid,adult|敬爱兄长','book,bird|少小当知'],
+['mother,kid|孝悌为先','book,bird|博闻广见','grain,grain|识数知算','book,pen|识字明文'],
+['grain,grain|积一为十','grain,grain,grain|积十为百','wave,wave|百千相续','mount,mount|千而至万'],
+['mount,sun,kid|天地人三才','sun,moon,cloud|日月星三光','wave,lamp|水与火','tree,wave|五行流转'],
+['king,adult|君臣之义','adult,kid|父子之亲','adult,mother|夫妇和顺','tree,tree|人伦有序'],
+['sun,plum|春华如画','moon,grain|秋收冬藏','sun,moon|四时轮转','wave,wave|运转无穷'],
+['bird,bird|北雁南飞','sun,moon|日升月落','mount,mount|四方之维','pagoda,house|中定四方'],
+['wave,lamp|水润火明','tree,mount|木金土立','tree,wave|五行相生','grain,grain|数理为本'],
+['lotus,lotus|仁义如莲','book,bell|礼智信持','book,book|五常之道','pine,pine|恒常不乱'],
+['grain,grain|稻粱菽粟','grain,grain,grain|麦黍稷丰','grain,grain|六谷养人','grain,house|民以食为天'],
+['horse,ox,sheep|马牛羊','rooster,dog,pig|鸡犬豕','ox,sheep|六畜兴旺','house,house|人所豢养'],
+['sun,cloud|喜怒如晴雨','cloud,wave|哀惧如波','lotus,wave|爱恶与欲','sun,moon|七情俱全'],
+['bell,drum|匏土革鸣','drum,bell|木石金声','lute,bamboo|丝竹之音','bell,lute|八音和鸣'],
+['pagoda,pagoda|高曾祖辈','adult,adult|父及己身','adult,kid|身传于子','kid,kid|子及孙辈'],
+['kid,kid|自子及孙','pagoda,pagoda|至于玄曾','tree,tree|九族之亲','house,house|人伦之序'],
+['adult,kid|父慈子孝','adult,mother|夫唱妇随','kid,kid|兄友其弟','kid,kid|弟恭其兄'],
+['tree,tree|长幼有序','bird,bird|朋友以信','king,adult|君仁臣敬','adult,king|臣忠其君'],
+['book,book|十义之教','kid,kid|人所同守','book,pen|当师而行','pine,pine|不可违背'],
+['cloud,cloud|斩衰齐衰','pagoda,pagoda|大功小功','moon,cloud|缌麻之服','pine,pine|五服终焉'],
+['bell,sword|礼乐射御','horse,book|御书与数','book,sword|古之六艺','book,cloud|今不全备'],
+['book,pen|惟书之学','kid,book|人人共遵','book,book|既识其字','book,pen|讲求说文'],
+['book,bamboo|古文之体','book,pen|篆分大小','pen,pen|隶草相继','book,bamboo|演变有序'],
+['mount,mount|学海书山','tree,tree|繁而可惧','book,book|略说其要','wave,wave|能知其源'],
+['kid,book|训蒙之始','book,pen|须讲究法','book,book|训诂求详','pen,pen|句读分明'],
+['kid,book|为学之始','sun,cloud|必有其初','book,bamboo|小学既成','book,book,book|乃至四书'],
+['book,book|论语之书','bamboo,bamboo|二十篇章','kid,kid|群贤弟子','pen,book|记录善言'],
+['book,book|孟子七篇','bamboo,bamboo|七篇而止','book,lotus|讲道德义','lotus,book|说仁义理'],
+['pen,book|中庸之作','pen,pen|子思之笔','pine,pine|中正不偏','mount,mount|恒常不易'],
+['pen,book|大学之作','adult,book|曾子所传','house,house|修身齐家','pagoda,king|治国平天下'],
+['book,lotus|孝经既通','book,book|四书既熟','book,book|如六经者','kid,book|方可始读'],
+['book,book,lute|诗书与易','bell,book|礼与春秋','book,book,book|号为六经','lamp,lamp|当求其义'],
+['mount,mount|连山之易','mount,wave|归藏之易','sun,moon|周易阴阳','book,book|三易详备'],
+['book,king|典谟之篇','book,king|训诰之文','book,sword|誓命之辞','book,cloud|尚书深奥'],
+['king,adult|周公制礼','king,book|周礼之制','book,bell|六官之设','pagoda,king|治体以存'],
+['adult,adult|大小二戴','pen,book|注礼记言','book,lotus|述圣人之言','bell,lute|礼乐完备'],
+['bird,wave|国风之诗','bell,bell|雅颂之章','book,lute|号为四诗','bird,bird|当吟当咏'],
+['book,cloud|诗道既衰','pen,book|春秋乃作','pen,sword|寓褒贬意','lotus,wave|别善恶行'],
+['book,book,book|三传之解','sheep,book|公羊之传','book,pen|左氏之传','grain,book|谷梁之传'],
+['sun,cloud|经义既明','book,book|方读诸子','grain,grain|撮其要旨','pen,book|记其事理'],
+['book,book,book|五子之书','book,pen|荀子扬雄','book,pen|文中子者','pine,bird|老庄之道'],
+['book,book|经子既通','book,bamboo|乃读诸史','pagoda,pagoda|考其世系','sun,moon|知终始焉'],
+['sun,grain|伏羲神农','king,king|至于黄帝','king,king,king|号为三皇','mount,cloud|居上古世'],
+['king,king|唐尧有虞','king,king|号为二帝','adult,adult|揖让相承','grain,grain|称为盛世'],
+['king,wave|夏禹治水','king,sun|商汤代夏','king,king|周文周武','king,king,king|称为三王'],
+['king,kid|夏禹传子','house,king|家天下始','bamboo,bamboo|四百余载','pagoda,cloud|夏社乃迁'],
+['sword,king|商汤伐夏','king,king|国号为商','bamboo,bamboo|六百余载','moon,cloud|至纣而亡'],
+['king,sword|周武兴师','sword,king|诛纣吊民','bamboo,bamboo,bamboo|八百年祚','pine,pine|最为长久'],
+['cart,cart|平王东迁','bell,cloud|王纲坠地','sword,sword|干戈四起','pen,pen|游说风行'],
+['bird,cloud|春秋之始','sword,sword|战国之终','king,sword|五霸称强','horse,sword|七雄并出'],
+['king,king|嬴秦之帝','mount,mount|兼并六国','pagoda,pagoda|二世而传','sword,sword|楚汉相争'],
+['sun,king|高祖兴汉','pagoda,king|汉业乃建','king,kid|至于孝平','cloud,moon|王莽篡汉'],
+['sun,king|光武中兴','king,king|是为东汉','bamboo,bamboo|四百余年','moon,cloud|终于献帝'],
+['king,king,king|魏蜀吴立','sword,king|争汉之鼎','sword,sword|号为三国','king,king|迄于两晋'],
+['king,king|宋齐相继','king,king|梁陈承之','pagoda,wave|是为南朝','pagoda,house|建都金陵'],
+['horse,king|北有元魏','sun,moon|分为东西','king,horse|宇文之周','king,horse|与高氏齐'],
+['king,king|至于隋朝','mount,mount|混一土宇','pagoda,cloud|不再传世','bamboo,cloud|统绪乃失'],
+['king,king|唐之高祖','sword,horse|起兵义师','sword,wave|扫除隋乱','pagoda,sun|创立国基'],
+['bamboo,bamboo|二十传位','bamboo,bamboo|三百年祚','sword,king|梁王篡灭','king,cloud|国号乃改'],
+['king,king,king|梁唐晋祚','king,king|及汉与周','bamboo,bamboo|号为五代','book,pen|各有其由'],
+['sun,king|炎宋之兴','king,king|受周之禅','bamboo,bamboo|十八传世','wave,wave|南北混一'],
+['horse,horse|辽金并起','king,king|帝号纷纷','sword,horse|及灭辽邦','pagoda,house|宋室犹存'],
+['horse,sword|元朝之兴','king,cloud|金绪乃歇','pagoda,wave|有宋之世','moon,cloud|一同覆灭'],
+['pagoda,king|入主中原','horse,horse|兼有戎狄','bamboo,bamboo|九十余载','pagoda,cloud|国祚乃废'],
+['sun,king|明祖之兴','sun,sun|国号大明','king,king|年号洪武','pagoda,wave|定都金陵'],
+['king,king|至于成祖','cart,king|迁都燕京','bamboo,bamboo|十七传世','moon,cloud|至于崇祯'],
+['cloud,sword|权阉肆虐','sword,sword|流寇如林','horse,sword|李闯陷京','lamp,cloud|神器乃焚'],
+['king,horse|清之太祖','king,sun|膺承天命','sword,sword|靖定四方','mount,mount|克成大定'],
+['book,book|廿一史书','book,bamboo|尽在于此','book,sword|载治与乱','sun,moon|知兴与衰'],
+['book,adult|读史之人','pen,book|考其实录','sun,moon|通贯古今','bird,cloud|如亲目见'],
+['kid,book|口诵其文','kid,lamp|心惟其义','sun,book|朝诵于斯','moon,book|夕习于斯'],
+['adult,book|昔有仲尼','kid,adult|师事项橐','adult,king|古之圣贤','lamp,book|犹尚勤学'],
+['adult,book|赵之中令','book,book|日读论语','king,adult|既登相位','lamp,book|学犹勤勉'],
+['book,grain|披蒲编书','bamboo,pen|削竹为简','book,cloud|家贫无书','kid,lamp|犹知自勉'],
+['lamp,house|头悬于梁','sword,book|锥刺其股','kid,book|无人相督','lamp,lamp|自觉勤苦'],
+['lamp,star|囊萤照读','moon,star|映雪夜读','house,house|家虽贫寒','lamp,book|学而不辍'],
+['tree,book|负薪而读','ox,book|挂角而读','adult,wave|身虽劳苦','pine,pine|犹自卓绝'],
+['adult,book|苏氏老泉','bamboo,bamboo|二十七岁','kid,lamp|始发愤志','book,book|读书万卷'],
+['adult,adult|其年既老','moon,cloud|犹悔学迟','kid,kid|尔等少年','sun,kid|宜及早思'],
+['adult,king|若彼梁灏','bamboo,bamboo|八十二龄','king,adult|廷对殿上','sun,king|魁首多士'],
+['sun,king|彼既成名','bird,bird|众皆称奇','kid,kid|尔等少年','mount,mount|宜早立志'],
+['kid,book|祖莹八岁','kid,lute|能咏诗篇','kid,book|李泌七岁','kid,book|能赋棋局'],
+['sun,kid|彼之颖悟','bird,bird|人皆称奇','kid,book|尔等幼学','kid,kid|当效其勤'],
+['kid,lute|蔡氏文姬','lute,wave|能辨琴音','kid,moon|谢氏道韫','pen,book|能咏诗吟'],
+['kid,kid|彼为女子','sun,kid|且甚聪敏','kid,kid|尔为男子','bell,bell|当自警醒'],
+['kid,king|唐之刘晏','kid,kid|方七岁龄','kid,sun|举为神童','pen,book|职作正字'],
+['kid,kid|彼虽年幼','kid,king|身已入仕','kid,book|尔等幼学','bird,bird|勉力可致'],
+['kid,sun|有为之人','kid,kid|亦当如此','dog,moon|犬守长夜','rooster,sun|鸡司晨晓'],
+['kid,cloud|苟且不学','kid,cloud|何以为人','lotus,wave|蚕能吐丝','plum,plum|蜂能酿蜜'],
+['kid,cloud|人若不学','rooster,grain|不如万物','kid,book|幼时勤学','adult,mount|壮年施行'],
+['king,adult|上以报君','grain,house|下以泽民','bird,bird|扬其名声','mother,kid|显耀父母'],
+['sun,pagoda|光耀前人','tree,kid|恩泽后人','adult,kid|人遗子孙','grain,grain|满籯黄金'],
+['adult,kid|我教子孙','book,book|惟以一经','grain,grain|勤则有功','cloud,cloud|戏则无益'],
+['bell,bell|戒之戒之','sun,kid|宜自勉力']
+];
+
+/* =========================================================
+   渲染
+========================================================= */
+let current = 0;        // 当前索引（0-101）
+let playing = false;
+let timer = null;
+const volListEl = document.getElementById('volList');
+const storyView = document.getElementById('storyView');
+const emptyState = document.getElementById('emptyState');
+const navFoot = document.getElementById('navFoot');
+const mainScroll = document.getElementById('mainScroll');
+
+function buildSidebar(){
+  volListEl.innerHTML='';
+  VOLS.forEach((vol,vi)=>{
+    const items = DATA.filter(d=>d.v===vi+1);
+    const sec = document.createElement('section');
+    sec.className='vol';
+    sec.innerHTML=`
+      <div class="vol-head">
+        <span class="v-no">卷${vol.no}</span>
+        <span class="v-name">${vol.name}</span>
+        <span class="v-count">${vol.range}</span>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="vol-items"></div>`;
+    const box = sec.querySelector('.vol-items');
+    items.forEach(it=>{
+      const el=document.createElement('div');
+      el.className='item';el.dataset.idx=it.i-1;
+      el.innerHTML=`<span class="no">${String(it.i).padStart(2,'0')}</span>
+        <span class="txt">${it.w[0]} · ${it.w[1]||it.w[0]}<small>${it.t.slice(0,14)}…</small></span>`;
+      el.addEventListener('click',()=>{select(it.i-1,true)});
+      box.appendChild(el);
+    });
+    sec.querySelector('.vol-head').addEventListener('click',()=>sec.classList.toggle('collapsed'));
+    volListEl.appendChild(sec);
+  });
+}
+
+function select(idx,scrollMain){
+  if(idx<0||idx>=DATA.length)return;
+  current=idx;
+  emptyState.style.display='none';
+  storyView.style.display='block';
+  navFoot.style.display='flex';
+  storyView.classList.remove('story');void storyView.offsetWidth;storyView.classList.add('story');
+  renderStory(idx,true);
+  refreshActive();
+  refreshStat();
+  if(scrollMain)mainScroll.scrollTo({top:0,behavior:'smooth'});
+  const it=document.querySelector(`.item[data-idx="${idx}"]`);
+  if(it)it.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+function renderStory(idx,animated){
+  const d=DATA[idx];
+  const vol=VOLS[d.v-1];
+  const SC=SCENES[idx]||[];
+  // 每一句 = 大字 + 专属画面 + 意象题词
+  const sgHtml = d.w.map((line,li)=>{
+    const sc=SC[li]||'cloud,wave';
+    const cap=sc.split('|')[1]||'';
+    return `
+    <div class="sg">
+      <div class="sg-head">
+        <span class="sg-no">句${'一二三四'[li]||li+1}</span>
+        <span class="sg-words" data-w="${li}">${line.split('').map(c=>`<span>${c}</span>`).join('')}</span>
+      </div>
+      <div class="sg-illu" data-illu="${li}">${sceneSVG(sc)}</div>
+      <div class="sg-cap">${cap}</div>
+    </div>`;
+  }).join('');
+  storyView.innerHTML=`
+    <div class="story-head">
+      <span class="chip">卷${vol.no} · ${vol.name}</span>
+      <span class="seq">第 ${d.i} 则</span>
+      <div class="playall">
+        <button class="btn primary" id="btnPlay">▶ 播放动画讲解</button>
+        <button class="btn" id="btnSpeak">🔊 朗读原文</button>
+      </div>
+    </div>
+    <div class="illu-wrap"><div class="illu" id="illuBox">${illuSVG(d.ill,d.i)}<div class="cap">${d.w[0]} · ${d.w[1]||''}</div></div></div>
+    <div class="verse-box">
+      <div class="seal">${d.v===5?'勉':d.v===4?'史':d.v===3?'经':d.v===2?'识':'孝'}<span class="mini">卷${vol.no}</span></div>
+      <div class="verse-grid">${sgHtml}</div>
+    </div>
+    <div class="section-card reveal"><span class="tag">译 文</span><div class="body" id="trBody">${d.t}</div></div>
+    <div class="tale-card reveal"><span class="tag">故 事 · 讲 解</span><div class="body" id="stBody">${d.s}</div></div>
+    <div class="moral-card reveal"><div class="m-seal">今鉴</div><div class="body">${d.m}</div></div>`;
+
+  document.getElementById('btnPlay').addEventListener('click',playAnimation);
+  document.getElementById('btnSpeak').addEventListener('click',speak);
+  document.getElementById('navPos').textContent=`${d.i} / ${DATA.length} 则`;
+
+  const sgWords=storyView.querySelectorAll('.sg-words span');
+  const sgIllus=storyView.querySelectorAll('.sg-illu');
+  if(animated){
+    // 整则主题插画浮现
+    setTimeout(()=>document.getElementById('illuBox').classList.add('show'),80);
+    // 句字逐字浮现 → 对应画面淡入
+    sgWords.forEach((s,i)=>setTimeout(()=>s.classList.add('on'),280+i*52));
+    const wTotal=d.w.reduce((n,l)=>n+l.length,0);
+    sgIllus.forEach((el,li)=>{
+      const delay=480+ (d.w.slice(0,li).reduce((n,l)=>n+l.length,0)+d.w[li].length)*52 + 180;
+      setTimeout(()=>el.classList.add('show'),delay);
+    });
+    // 段落渐显
+    const reveals=storyView.querySelectorAll('.reveal');
+    const base=480+wTotal*52+320;
+    reveals.forEach((r,i)=>setTimeout(()=>r.classList.add('on'),base+i*240));
+  }else{
+    document.getElementById('illuBox').classList.add('show');
+    sgWords.forEach(s=>s.classList.add('on'));
+    sgIllus.forEach(el=>el.classList.add('show'));
+    storyView.querySelectorAll('.reveal').forEach(r=>r.classList.add('on'));
+  }
+}
+
+/* ---- 动画播放 ---- */
+function playAnimation(){
+  const btn=document.getElementById('btnPlay');
+  if(playing){stopPlay();return;}
+  playing=true;btn.classList.add('playing');btn.textContent='⏸ 停止动画';
+  const d=DATA[current];
+  // 水墨涟漪
+  ripple(mainScroll);
+  const sgWords=storyView.querySelectorAll('.sg-words span');
+  const sgIllus=storyView.querySelectorAll('.sg-illu');
+  const reveals=storyView.querySelectorAll('.reveal');
+  // 重置
+  sgWords.forEach(s=>{s.classList.remove('on');s.style.opacity=0;});
+  sgIllus.forEach(el=>el.classList.remove('show'));
+  reveals.forEach(r=>r.classList.remove('on'));
+  document.getElementById('illuBox').classList.remove('show');
+  // 句字逐字浮现
+  sgWords.forEach((s,i)=>{
+    timer=setTimeout(()=>s.classList.add('on'),300+i*62);
+  });
+  // 每句字齐后，画面淡入
+  sgIllus.forEach((el,li)=>{
+    const delay=480+(d.w.slice(0,li).reduce((n,l)=>n+l.length,0)+d.w[li].length)*62+160;
+    timer=setTimeout(()=>el.classList.add('show'),delay);
+  });
+  timer=setTimeout(()=>document.getElementById('illuBox').classList.add('show'),420);
+  const wTotal=d.w.reduce((n,l)=>n+l.length,0);
+  const base=480+wTotal*62+300;
+  reveals.forEach((r,i)=>{
+    timer=setTimeout(()=>r.classList.add('on'),base+i*300);
+  });
+  // 播放完恢复按钮
+  timer=setTimeout(()=>{
+    playing=false;btn.classList.remove('playing');btn.textContent='▶ 播放动画讲解';
+  },base+reveals.length*300+400);
+}
+function stopPlay(){
+  playing=false;clearTimeout(timer);
+  const btn=document.getElementById('btnPlay');
+  btn.classList.remove('playing');btn.textContent='▶ 播放动画讲解';
+}
+function ripple(container){
+  const el=document.createElement('div');
+  el.className='ink-ripple';
+  const r=container.getBoundingClientRect();
+  el.style.left=(r.width*0.72)+'px';el.style.top=(r.height*0.18)+'px';
+  container.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('run'));
+  setTimeout(()=>el.remove(),1700);
+}
+
+/* ---- 朗读 ---- */
+let voices=[];let voiceReady=false;
+if('speechSynthesis' in window){
+  const load=()=>{voices=speechSynthesis.getVoices();voiceReady=voices.length>0;};
+  load();speechSynthesis.onvoiceschanged=load;
+}
+function speak(){
+  if(!('speechSynthesis' in window)){toast('当前浏览器不支持语音朗读');return;}
+  speechSynthesis.cancel();
+  const d=DATA[current];
+  const u=new SpeechSynthesisUtterance(d.w.join('。'));
+  u.lang='zh-CN';u.rate=.85;
+  const zh=voices.find(v=>/zh|Chinese|中文/i.test(v.lang+v.name));
+  if(zh)u.voice=zh;
+  speechSynthesis.speak(u);
+  toast('正在朗读原文…');
+}
+
+/* ---- 高亮 & 统计 ---- */
+function refreshActive(){
+  document.querySelectorAll('.item').forEach(el=>{
+    el.classList.toggle('active',+el.dataset.idx===current);
+  });
+  // 展开所在卷
+  document.querySelectorAll('.vol').forEach((sec,vi)=>{
+    const has=DATA.some((d,i)=>d.v===vi+1&&i===current);
+    if(has)sec.classList.remove('collapsed');
+  });
+}
+function refreshStat(){
+  document.getElementById('stat-cur').textContent=current+1;
+  const pct=(current+1)/DATA.length*100;
+  document.getElementById('progress').style.width=pct+'%';
+}
+
+/* ---- 搜索 ---- */
+document.getElementById('search').addEventListener('input',e=>{
+  const kw=e.target.value.trim();
+  if(!kw){document.querySelectorAll('.item').forEach(el=>el.style.display='');return;}
+  document.querySelectorAll('.item').forEach(el=>{
+    const d=DATA[+el.dataset.idx];
+    const hit=(d.w.join('')+d.t+d.s+d.m).includes(kw);
+    el.style.display=hit?'':'none';
+  });
+});
+
+/* ---- 键盘 & 按钮 ---- */
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowDown'){e.preventDefault();select(Math.min(current+1,DATA.length-1),true);}
+  if(e.key==='ArrowUp'){e.preventDefault();select(Math.max(current-1,0),true);}
+});
+document.getElementById('btnPrev').addEventListener('click',()=>select(Math.max(current-1,0),true));
+document.getElementById('btnNext').addEventListener('click',()=>select(Math.min(current+1,DATA.length-1),true));
+mainScroll.addEventListener('scroll',()=>{
+  const h=mainScroll.scrollHeight-mainScroll.clientHeight;
+  if(h>0)document.getElementById('progress').style.width=((mainScroll.scrollTop/h)*100).toFixed(1)+'%';
+});
+
+/* ---- toast ---- */
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ---- 启动 ---- */
+buildSidebar();
+refreshStat();
+// 默认展示第 1 则
+select(0,false);
+setTimeout(()=>{document.querySelector('.item[data-idx="0"]')?.scrollIntoView({block:'nearest'});},100);
+</script>
+</body>
+</html>
